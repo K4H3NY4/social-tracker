@@ -6,13 +6,10 @@ from datetime import datetime, timedelta, timezone
 from google import genai
 import os
 from dotenv import load_dotenv
-from flask_apscheduler import APScheduler
+
 
 # Load .env file
 load_dotenv()
-
-class Config:
-    SCHEDULER_API_ENABLED = True
 
 app = Flask(__name__)
 
@@ -547,11 +544,5 @@ def stats():
 # ================= RUN SERVER =================
 
 if __name__ == "__main__":
-    app.config.from_object(Config())
-
-    
-
-    scheduler = APScheduler()
-    scheduler.init_app(app)
-    scheduler.start()
-    app.run(debug=True)
+  
+    app.run(debug=False, port=8000)
