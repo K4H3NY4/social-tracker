@@ -621,7 +621,7 @@ def summary_date_range(client_name):
                 f"TikTok: {client.tiktok or 'Not linked'}\n\n"
                 f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n"
                 f"TikTok Posts: {tt_count}\n"
-                f"Include captions, descriptions and dates in the summary in a table format. For instagram and tiktok posts.\n"
+                f"Include captions, descriptions and dates in the summary in a table format from the database.\n"
             )
             response = genai_client.models.generate_content(
                 model="gemini-3-flash-preview",
