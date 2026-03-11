@@ -539,7 +539,6 @@ def summary_last_7days_count(client_name):
         db.close()
 
 
-
 @app.route("/summary/<client_name>/range", methods=["GET"])
 def summary_date_range(client_name):
     db = SessionLocal()
@@ -552,10 +551,7 @@ def summary_date_range(client_name):
             return jsonify({"error": "Missing required query parameters: 'start_date' and 'end_date' (Format: YYYY-MM-DD)"}), 400
 
         try:
-            # Parse dates and make them timezone aware (UTC)
-            # Start of the start day
             start_dt = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            # End of the end day (23:59:59)
             end_dt = datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
         except ValueError:
             return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
@@ -565,85 +561,78 @@ def summary_date_range(client_name):
         if not client:
             return jsonify({"error": f"Client '{client_name}' not found"}), 404
 
-        # ================= 3. INSTAGRAM COUNTS =================
-        ig_count = 0
-        ig_video_count = 0
-        ig_carousel_count = 0
-        ig_static_count = 0
+        # ================= 3. INSTAGRAM POSTS =================
+        ig_posts_query = []
+        ig_count = ig_video_count = ig_carousel_count = ig_static_count = 0
 
         if client.instagram:
-            # Base query for specific date range
             base_query = db.query(Post).filter(
                 Post.username == client.instagram,
                 Post.taken_at >= start_dt,
                 Post.taken_at <= end_dt
             )
 
-            # Total Instagram posts
             ig_count = base_query.count()
+            ig_video_count = base_query.filter(Post.video_versions != 'null').count()
+            ig_carousel_count = base_query.filter(Post.carousel_media.isnot('null')).count()
+            ig_static_count = base_query.filter(Post.video_versions.is_('null'), Post.carousel_media.is_('null')).count()
 
-            # Video posts (video_versions IS NOT NULL)
-            # Note: Keeping original logic for JSON/Null checking to match DB schema
-            ig_video_count = base_query.filter(
-                Post.video_versions != 'null'
-            ).count()
+            ig_posts_query = base_query.with_entities(Post.caption, Post.taken_at, Post.video_versions, Post.carousel_media).all()
 
-            # Carousel posts (carousel_media IS NOT NULL)
-            ig_carousel_count = base_query.filter(
-                Post.carousel_media.isnot('null')
-            ).count()
-
-            # Static posts (BOTH are NULL)
-            ig_static_count = base_query.filter(
-                Post.video_versions.is_('null'),
-                Post.carousel_media.is_('null')
-            ).count()
-
-        # ================= 4. TIKTOK COUNTS =================
+        # ================= 4. TIKTOK POSTS =================
+        tt_posts_query = []
         tt_count = 0
         if client.tiktok:
-            tt_count = db.query(TikTokVideo).filter(
+            base_tt = db.query(TikTokVideo).filter(
                 TikTokVideo.author == client.tiktok,
                 TikTokVideo.create_time >= start_dt,
                 TikTokVideo.create_time <= end_dt
-            ).count()
+            )
 
-        # ================= 5. GENERATE AI SUMMARY =================
+            tt_count = base_tt.count()
+            tt_posts_query = base_tt.with_entities(TikTokVideo.description, TikTokVideo.create_time).all()
+
+        # ================= 5. FORMAT POSTS =================
+        posts = []
+
+        for p in ig_posts_query:
+            posts.append({
+                "platform": "instagram",
+                "caption": p.caption,
+                "taken_at": p.taken_at.isoformat(),
+                "video_versions": p.video_versions,
+                "carousel_media": p.carousel_media
+            })
+
+        for p in tt_posts_query:
+            posts.append({
+                "platform": "tiktok",
+                "description": p.description,
+                "create_time": p.create_time.isoformat()
+            })
+
+        # ================= 6. AI SUMMARY =================
         ai_summary = "AI summary generation unavailable."
-        
         try:
             prompt = (
                 f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Client Name: {client.name}\n"
                 f"Instagram: {client.instagram or 'Not linked'}\n"
-                f"TikTok: {client.tiktok or 'Not linked'}\n"
-                f"Facebook: {client.facebook or 'Not linked'}\n"
-                f"Contract: {client.contract or 'N/A'}\n\n"
-                f"📈 INSTAGRAM METRICS:\n"
-                f"   • Total Posts: {ig_count}\n"
-                f"   • 🎥 Video Posts: {ig_video_count}\n"
-                f"   • 🎠 Carousel Posts: {ig_carousel_count}\n"
-                f"   • 📷 Static Posts: {ig_static_count}\n\n"
-                f"📈 TIKTOK METRICS:\n"
-                f"   • Total Videos: {tt_count}\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"TASK: Analyze if posting frequency and content mix meets expectations.\n"
-                f"Consider: Video engagement typically outperforms static posts.\n"
-                f"Provide brief executive summary and recommendations for the period {start_str} to {end_str}. Format the response in readable text with emojis and line breaks for clarity."
+                f"TikTok: {client.tiktok or 'Not linked'}\n\n"
+                f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n"
+                f"TikTok Posts: {tt_count}\n"
+                f"Include captions, descriptions and dates in the summary in a table format. For instagram and tiktok posts.\n"
             )
-
             response = genai_client.models.generate_content(
-                model="gemini-3-flash-preview", 
+                model="gemini-3-flash-preview",
                 contents=prompt
             )
             ai_summary = response.text
-
         except Exception as ai_error:
             print(f"⚠️ AI Generation Error: {ai_error}")
-            ai_summary = "Unable to generate AI summary at this time. Please try again later."
+            ai_summary = "Unable to generate AI summary at this time."
 
-        # ================= 6. RETURN RESPONSE =================
+        # ================= 7. RETURN RESPONSE =================
         return jsonify({
             "status": "success",
             "period": f"{start_str} to {end_str}",
@@ -652,13 +641,14 @@ def summary_date_range(client_name):
                     "video": ig_video_count,
                     "carousel": ig_carousel_count,
                     "static": ig_static_count,
-                    "total": ig_count,
+                    "total": ig_count
                 },
                 "tiktok": {
                     "total": tt_count
                 },
                 "ai_summary": ai_summary
-            }
+            },
+            "posts": posts
         })
 
     except Exception as e:
