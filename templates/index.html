@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Social Media Performance Dashboard</title>
 
+<!-- ✅ Markdown renderer + XSS protection -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+
 <style>
 
 body{
@@ -29,7 +33,7 @@ header{
   box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
-select,button{
+select,input,button{
   padding:0.6rem;
   margin-top:0.5rem;
   width:100%;
@@ -54,6 +58,16 @@ button:disabled{
 .loading{
   margin-top:1rem;
   font-style:italic;
+  color:#666;
+}
+
+.error{
+  margin-top:1rem;
+  color:#d32f2f;
+  background:#ffebee;
+  padding:1rem;
+  border-radius:5px;
+  display:none;
 }
 
 .summary{
@@ -73,6 +87,11 @@ button:disabled{
   border-radius:6px;
   text-align:center;
   box-shadow:0 2px 5px rgba(0,0,0,0.1);
+  transition:transform 0.2s;
+}
+
+.card:hover{
+  transform:translateY(-3px);
 }
 
 .card h3{
@@ -84,19 +103,132 @@ button:disabled{
 .card p{
   margin:5px 0 0 0;
   color:#555;
+  font-size:14px;
 }
 
+/* ✅ Updated AI box styles for Markdown content */
 .ai-box{
   background:#f1f9f3;
   border-left:5px solid #4CAF50;
   padding:1rem;
   border-radius:5px;
+  line-height:1.6;
 }
 
-pre{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  margin:0;
+/* Markdown element styling */
+.ai-box h1, .ai-box h2, .ai-box h3, .ai-box h4 {
+  color:#2e7d32;
+  margin:1.2rem 0 0.5rem 0;
+  font-weight:600;
+}
+.ai-box h1 { font-size:1.4rem; }
+.ai-box h2 { font-size:1.25rem; }
+.ai-box h3 { font-size:1.1rem; }
+
+.ai-box p { 
+  margin:0.6rem 0; 
+  color:#333;
+}
+
+.ai-box ul, .ai-box ol {
+  margin:0.5rem 0;
+  padding-left:1.5rem;
+  color:#333;
+}
+
+.ai-box li { 
+  margin:0.3rem 0; 
+}
+
+.ai-box strong { 
+  color:#1b5e20; 
+  font-weight:600;
+}
+
+.ai-box em {
+  color:#388e3c;
+}
+
+.ai-box code {
+  background:#e8f5e9;
+  padding:2px 6px;
+  border-radius:3px;
+  font-family:monospace;
+  font-size:0.9em;
+}
+
+.ai-box pre {
+  background:#263238;
+  color:#f8f8f2;
+  padding:1rem;
+  border-radius:5px;
+  overflow-x:auto;
+  margin:0.8rem 0;
+}
+
+.ai-box pre code {
+  background:none;
+  padding:0;
+  color:inherit;
+  font-size:0.9em;
+}
+
+.ai-box table {
+  width:100%;
+  border-collapse:collapse;
+  margin:1rem 0;
+  font-size:0.95rem;
+}
+
+.ai-box th, .ai-box td {
+  border:1px solid #c8e6c9;
+  padding:8px 12px;
+  text-align:left;
+}
+
+.ai-box th {
+  background:#4CAF50;
+  color:white;
+  font-weight:600;
+}
+
+.ai-box tr:nth-child(even) {
+  background:#f5f5f5;
+}
+
+.ai-box blockquote {
+  border-left:4px solid #4CAF50;
+  margin:1rem 0;
+  padding:0.5rem 1rem;
+  background:#e8f5e9;
+  font-style:italic;
+}
+
+.ai-box hr {
+  border:none;
+  border-top:2px solid #4CAF50;
+  margin:1.5rem 0;
+}
+
+.ai-box a {
+  color:#2e7d32;
+  text-decoration:none;
+}
+.ai-box a:hover {
+  text-decoration:underline;
+}
+
+.date-group{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  margin-bottom:1rem;
+}
+
+@media(max-width:600px){
+  .date-group{
+    grid-template-columns:1fr;
+  }
 }
 
 </style>
@@ -111,20 +243,33 @@ pre{
 <div class="container">
 
 <h2>Select Client</h2>
-
 <select id="clientSelect">
-<option value="">Loading clients...</option>
+  <option value="">Loading clients...</option>
 </select>
 
-<button id="summaryBtn">Get 7-Day Summary</button>
+<h3>Date Range</h3>
+<div class="date-group">
+  <div>
+    <label for="startDate">Start Date</label>
+    <input type="date" id="startDate">
+  </div>
+  <div>
+    <label for="endDate">End Date</label>
+    <input type="date" id="endDate">
+  </div>
+</div>
+
+<button id="summaryBtn">Get Performance Summary</button>
 
 <div id="loading" class="loading" style="display:none;">
-Loading summary...
+  ⏳ Loading data...
 </div>
+
+<div id="error" class="error"></div>
 
 <div id="summary" class="summary" style="display:none;">
 
-<h2>Performance Metrics (Last 7 Days)</h2>
+<h2>📊 Performance Metrics</h2>
 
 <div class="metrics">
 
@@ -155,10 +300,11 @@ Loading summary...
 
 </div>
 
-<h2>AI Performance Summary</h2>
+<h2>🤖 AI Performance Summary</h2>
 
+<!-- ✅ Changed from <pre> to <div> for HTML rendering -->
 <div class="ai-box">
-<pre id="aiSummary"></pre>
+  <div id="aiSummary"></div>
 </div>
 
 </div>
@@ -167,108 +313,137 @@ Loading summary...
 
 <script>
 
-const API_BASE = "http://127.0.0.1:5000";
+// ✅ Update this to match your actual API base URL
+const API_BASE = "http://127.0.0.1:5001";
 
 const clientSelect = document.getElementById("clientSelect");
 const summaryBtn = document.getElementById("summaryBtn");
 const loading = document.getElementById("loading");
+const errorDiv = document.getElementById("error");
 const summaryDiv = document.getElementById("summary");
 
-window.onload = loadClients;
+const startDate = document.getElementById("startDate");
+const endDate = document.getElementById("endDate");
 
+// Initialize on load
+window.onload = () => {
+  loadClients();
+  setDefaultDates();
+};
+
+// Set default date range: last 7 days
+function setDefaultDates(){
+  const today = new Date();
+  const past = new Date();
+  past.setDate(today.getDate() - 7);
+
+  // Format as YYYY-MM-DD for input fields
+  startDate.value = past.toISOString().split("T")[0];
+  endDate.value = today.toISOString().split("T")[0];
+}
+
+// Load client list from /clients endpoint
 async function loadClients(){
-
   try{
-
     const res = await fetch(`${API_BASE}/clients`);
-
     if(!res.ok) throw new Error("Failed to fetch clients");
-
+    
     const clients = await res.json();
-
     clientSelect.innerHTML = '<option value="">-- Choose a client --</option>';
 
     clients.forEach(client => {
-
       const option = document.createElement("option");
       option.value = client.name;
       option.textContent = client.name;
-
       clientSelect.appendChild(option);
-
     });
 
   }catch(err){
-
-    console.error(err);
+    console.error("Client load error:", err);
     clientSelect.innerHTML = '<option>Error loading clients</option>';
-
+    showError("Could not load client list. Please check your API connection.");
   }
-
 }
 
+// Show error message
+function showError(message){
+  errorDiv.textContent = message;
+  errorDiv.style.display = "block";
+  setTimeout(() => {
+    errorDiv.style.display = "none";
+  }, 5000);
+}
+
+// Main summary fetch function
 summaryBtn.onclick = getSummary;
 
 async function getSummary(){
-
   const clientName = clientSelect.value;
+  const start = startDate.value;
+  const end = endDate.value;
 
+  // Validation
   if(!clientName){
     alert("Please select a client.");
     return;
   }
+  if(!start || !end){
+    alert("Please select both start and end dates.");
+    return;
+  }
+  if(new Date(start) > new Date(end)){
+    alert("Start date cannot be after end date.");
+    return;
+  }
 
+  // UI state: loading
   summaryBtn.disabled = true;
   loading.style.display = "block";
+  errorDiv.style.display = "none";
   summaryDiv.style.display = "none";
 
   try{
-
+    // ✅ Corrected endpoint & parameter names to match Flask route
     const res = await fetch(
-      `${API_BASE}/summary/${encodeURIComponent(clientName)}/7days`
+      `${API_BASE}/summary/${encodeURIComponent(clientName)}/range?start_date=${start}&end_date=${end}`
     );
 
-    if(!res.ok) throw new Error("Failed to fetch summary");
+    if(!res.ok){
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
 
     const data = await res.json();
 
-    if(data.error){
-      alert(data.error);
-      return;
-    }
+    // ✅ Parse pre-calculated metrics from API response
+    const ig = data.summary.instagram || {};
+    const tt = data.summary.tiktok || {};
 
-    document.getElementById("igTotal").textContent =
-      data.summary.instagram.total;
+    // Update metric cards
+    document.getElementById("igTotal").textContent = ig.total ?? 0;
+    document.getElementById("igVideo").textContent = ig.video ?? 0;
+    document.getElementById("igCarousel").textContent = ig.carousel ?? 0;
+    document.getElementById("igStatic").textContent = ig.static ?? 0;
+    document.getElementById("ttTotal").textContent = tt.total ?? 0;
 
-    document.getElementById("igVideo").textContent =
-      data.summary.instagram.video;
+    // ✅ Use AI summary from API (with fallback) + render Markdown
+    const aiText = data.summary.ai_summary || "No AI summary available.";
+    
+    // 🎯 Render Markdown safely with marked.js + DOMPurify
+    const cleanHTML = DOMPurify.sanitize(marked.parse(aiText));
+    document.getElementById("aiSummary").innerHTML = cleanHTML;
 
-    document.getElementById("igCarousel").textContent =
-      data.summary.instagram.carousel;
-
-    document.getElementById("igStatic").textContent =
-      data.summary.instagram.static;
-
-    document.getElementById("ttTotal").textContent =
-      data.summary.tiktok.total;
-
-    document.getElementById("aiSummary").textContent =
-      data.summary.ai_summary || "No AI summary available.";
-
+    // Show results
     summaryDiv.style.display = "block";
 
   }catch(err){
-
-    console.error(err);
-    alert("Error retrieving summary.");
-
+    console.error("Summary fetch error:", err);
+    showError(`Error: ${err.message}. Please try again.`);
   }finally{
-
+    // Reset UI state
     loading.style.display = "none";
     summaryBtn.disabled = false;
-
   }
-
 }
 
 </script>

@@ -468,7 +468,7 @@ def summary_last_7days_count(client_name):
         
         try:
             prompt = (
-                f"📊 CLIENT PERFORMANCE REPORT (Last 7 Days)\n"
+                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Client Name: {client.name}\n"
                 f"Instagram: {client.instagram or 'Not linked'}\n"
@@ -485,7 +485,22 @@ def summary_last_7days_count(client_name):
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"TASK: Analyze if posting frequency and content mix meets expectations.\n"
                 f"Consider: Video engagement typically outperforms static posts.\n"
-                f"Provide brief executive summary and recommendations considering the date is for the past 7 days. Format the response in readble text with emojis and line breaks for clarity."
+                f"Provide brief executive summary and recommendations for the period {start_str} to {end_str}.\n\n"
+                f"⚠️ FORMATTING RULES (STRICT):\n"
+                f"- Use PLAIN TEXT ONLY — NO Markdown syntax\n"
+                f"- Do NOT use: **bold**, *italic*, ### headers, | tables |, or --- dividers\n"
+                f"- Use emojis and simple line breaks for visual structure\n"
+                f"- Use ALL CAPS or emojis for emphasis instead of bold/italic\n"
+                f"- Format numbers and lists with simple bullets (•) or dashes (-)\n"
+                f"- Format all output as plain text with no markdown\n\n"
+                f"- Use actual table where posible.\n"
+                f"Example of desired format:\n"
+                f"📊 EXECUTIVE SUMMARY\n"
+                f"The account is over-performing with 24 Instagram posts in 6 weeks...\n\n"
+                f"💡 RECOMMENDATIONS\n"
+                f"• Optimize content mix: shift static posts to video\n"
+                f"• Repurpose top TikToks as Instagram Reels\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
 
             response = genai_client.models.generate_content(
@@ -502,6 +517,136 @@ def summary_last_7days_count(client_name):
         return jsonify({
             "status": "success",
             "period": "last_7_days",
+            "summary": {
+                "instagram": {
+                    "video": ig_video_count,
+                    "carousel": ig_carousel_count,
+                    "static": ig_static_count,
+                    "total": ig_count,
+                },
+                "tiktok": {
+                    "total": tt_count
+                },
+                "ai_summary": ai_summary
+            }
+        })
+
+    except Exception as e:
+        print(f"❌ Server Error: {e}")
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+
+    finally:
+        db.close()
+
+
+
+@app.route("/summary/<client_name>/range", methods=["GET"])
+def summary_date_range(client_name):
+    db = SessionLocal()
+    try:
+        # ================= 1. PARSE DATE RANGE =================
+        start_str = request.args.get('start_date')
+        end_str = request.args.get('end_date')
+
+        if not start_str or not end_str:
+            return jsonify({"error": "Missing required query parameters: 'start_date' and 'end_date' (Format: YYYY-MM-DD)"}), 400
+
+        try:
+            # Parse dates and make them timezone aware (UTC)
+            # Start of the start day
+            start_dt = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            # End of the end day (23:59:59)
+            end_dt = datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
+
+        # ================= 2. FETCH CLIENT =================
+        client = db.query(Client).filter(Client.name == client_name).first()
+        if not client:
+            return jsonify({"error": f"Client '{client_name}' not found"}), 404
+
+        # ================= 3. INSTAGRAM COUNTS =================
+        ig_count = 0
+        ig_video_count = 0
+        ig_carousel_count = 0
+        ig_static_count = 0
+
+        if client.instagram:
+            # Base query for specific date range
+            base_query = db.query(Post).filter(
+                Post.username == client.instagram,
+                Post.taken_at >= start_dt,
+                Post.taken_at <= end_dt
+            )
+
+            # Total Instagram posts
+            ig_count = base_query.count()
+
+            # Video posts (video_versions IS NOT NULL)
+            # Note: Keeping original logic for JSON/Null checking to match DB schema
+            ig_video_count = base_query.filter(
+                Post.video_versions != 'null'
+            ).count()
+
+            # Carousel posts (carousel_media IS NOT NULL)
+            ig_carousel_count = base_query.filter(
+                Post.carousel_media.isnot('null')
+            ).count()
+
+            # Static posts (BOTH are NULL)
+            ig_static_count = base_query.filter(
+                Post.video_versions.is_('null'),
+                Post.carousel_media.is_('null')
+            ).count()
+
+        # ================= 4. TIKTOK COUNTS =================
+        tt_count = 0
+        if client.tiktok:
+            tt_count = db.query(TikTokVideo).filter(
+                TikTokVideo.author == client.tiktok,
+                TikTokVideo.create_time >= start_dt,
+                TikTokVideo.create_time <= end_dt
+            ).count()
+
+        # ================= 5. GENERATE AI SUMMARY =================
+        ai_summary = "AI summary generation unavailable."
+        
+        try:
+            prompt = (
+                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Client Name: {client.name}\n"
+                f"Instagram: {client.instagram or 'Not linked'}\n"
+                f"TikTok: {client.tiktok or 'Not linked'}\n"
+                f"Facebook: {client.facebook or 'Not linked'}\n"
+                f"Contract: {client.contract or 'N/A'}\n\n"
+                f"📈 INSTAGRAM METRICS:\n"
+                f"   • Total Posts: {ig_count}\n"
+                f"   • 🎥 Video Posts: {ig_video_count}\n"
+                f"   • 🎠 Carousel Posts: {ig_carousel_count}\n"
+                f"   • 📷 Static Posts: {ig_static_count}\n\n"
+                f"📈 TIKTOK METRICS:\n"
+                f"   • Total Videos: {tt_count}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"TASK: Analyze if posting frequency and content mix meets expectations.\n"
+                f"Consider: Video engagement typically outperforms static posts.\n"
+                f"Provide brief executive summary and recommendations for the period {start_str} to {end_str}. Format the response in readable text with emojis and line breaks for clarity."
+            )
+
+            response = genai_client.models.generate_content(
+                model="gemini-3-flash-preview", 
+                contents=prompt
+            )
+            ai_summary = response.text
+
+        except Exception as ai_error:
+            print(f"⚠️ AI Generation Error: {ai_error}")
+            ai_summary = "Unable to generate AI summary at this time. Please try again later."
+
+        # ================= 6. RETURN RESPONSE =================
+        return jsonify({
+            "status": "success",
+            "period": f"{start_str} to {end_str}",
             "summary": {
                 "instagram": {
                     "video": ig_video_count,
@@ -545,4 +690,4 @@ def stats():
 
 if __name__ == "__main__":
   
-    app.run(debug=False, port=8000)
+    app.run(debug=True, host="0.0.0.0", port=5001)
