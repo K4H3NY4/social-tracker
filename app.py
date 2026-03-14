@@ -617,11 +617,13 @@ def summary_date_range(client_name):
             prompt = (
                 f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n\n"
                 f"Client Name: {client.name}\n\n"
+                f"Contract: {client.contract or 'N/A'}\n\n"
                 f"Instagram: {client.instagram or 'Not linked'}\n\n"
                 f"TikTok: {client.tiktok or 'Not linked'}\n\n"
                 f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n\n"
                 f"TikTok Posts: {tt_count}\n\n"
                 f"Generate a brief executive report for the period {start_str} to {end_str}. "
+                f"TASK: Analyze if posting frequency and content mix meets expectations based on the contract {client.contract}.\n"
                 f"The report should include:Executive Summary Provide a concise overview of the client’s social media activity, highlighting key patterns in posting frequency, platform usage, and content types."
                 f"Strategic Recommendations  \n"
                 f"Provide 3–5 clear and actionable recommendations to improve content strategy, posting consistency, and platform performance."
