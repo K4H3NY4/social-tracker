@@ -615,13 +615,12 @@ def summary_date_range(client_name):
         ai_summary = "AI summary generation unavailable."
         try:
             prompt = (
-                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
-                f"Client Name: {client.name}\n"
-                f"Instagram: {client.instagram or 'Not linked'}\n"
+                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n\n"
+                f"Client Name: {client.name}\n\n"
+                f"Instagram: {client.instagram or 'Not linked'}\n\n"
                 f"TikTok: {client.tiktok or 'Not linked'}\n\n"
-                f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n"
-                f"TikTok Posts: {tt_count}\n"
-                f"Include captions, descriptions and dates in the summary in a table format from the database.\n"
+                f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n\n"
+                f"TikTok Posts: {tt_count}\n\n"
                 f"Generate a brief executive report for the period {start_str} to {end_str}. "
                 f"The report should include:Executive Summary Provide a concise overview of the client’s social media activity, highlighting key patterns in posting frequency, platform usage, and content types."
                 f"Strategic Recommendations  \n"
