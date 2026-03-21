@@ -6,11 +6,12 @@ print("INSTAGRAM SCRAPER - RapidAPI (As Per Documentation)")
 print("="*70)
 
 # RapidAPI Credentials
-RAPIDAPI_KEY = "bd5904a96cmsh3edcc696733215fp1eeb5ajsne133bf560c27"
+RAPIDAPI_KEY = "4355a1c5damsh0eaa93819b37955p157a13jsnc37265ed86bd"
 RAPIDAPI_HOST = "instagram-scraper-stable-api.p.rapidapi.com"
 
 # Base URL
 BASE_URL = "https://instagram-scraper-stable-api.p.rapidapi.com"
+
 
 # ============================================================
 # GET USER POSTS (with form data)

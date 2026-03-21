@@ -7,7 +7,7 @@ url = "https://tiktok-api6.p.rapidapi.com/user/videos"
 querystring = {"username": "festivebreadke"}
 
 headers = {
-    "x-rapidapi-key": "bd5904a96cmsh3edcc696733215fp1eeb5ajsne133bf560c27",
+    "x-rapidapi-key": "4355a1c5damsh0eaa93819b37955p157a13jsnc37265ed86bd",
     "x-rapidapi-host": "tiktok-api6.p.rapidapi.com"
 }
 
