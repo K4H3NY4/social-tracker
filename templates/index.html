@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Social Media Performance Dashboard</title>
 
-<!-- ✅ Markdown renderer + XSS protection -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
 
@@ -25,7 +24,7 @@ header{
 }
 
 .container{
-  max-width:1000px;
+  max-width:1100px;
   margin:2rem auto;
   background:white;
   padding:2rem;
@@ -47,13 +46,8 @@ button{
   cursor:pointer;
 }
 
-button:hover{
-  background:#45a049;
-}
-
-button:disabled{
-  background:#aaa;
-}
+button:hover{ background:#45a049; }
+button:disabled{ background:#aaa; }
 
 .loading{
   margin-top:1rem;
@@ -70,23 +64,21 @@ button:disabled{
   display:none;
 }
 
-.summary{
-  margin-top:2rem;
-}
+.summary{ margin-top:2rem; }
 
 .metrics{
   display:grid;
-  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
-  gap:15px;
+  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;
   margin-bottom:25px;
 }
 
 .card{
   background:#f8f8f8;
-  padding:15px;
-  border-radius:6px;
+  padding:14px;
+  border-radius:8px;
   text-align:center;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+  box-shadow:0 2px 5px rgba(0,0,0,0.08);
   transition:transform 0.2s;
 }
 
@@ -97,127 +89,34 @@ button:disabled{
 .card h3{
   margin:0;
   font-size:22px;
-  color:#4CAF50;
+  color:#2e7d32;
 }
 
 .card p{
-  margin:5px 0 0 0;
+  margin:6px 0 0 0;
   color:#555;
-  font-size:14px;
+  font-size:13px;
 }
 
-/* ✅ Updated AI box styles for Markdown content */
+/* PLATFORM HEADERS */
+.platform-title{
+  margin-top:25px;
+  font-size:18px;
+  font-weight:bold;
+  color:#333;
+  border-left:5px solid #4CAF50;
+  padding-left:10px;
+}
+
+/* AI BOX */
 .ai-box{
   background:#f1f9f3;
   border-left:5px solid #4CAF50;
   padding:1rem;
   border-radius:5px;
-  line-height:1.6;
 }
 
-/* Markdown element styling */
-.ai-box h1, .ai-box h2, .ai-box h3, .ai-box h4 {
-  color:#2e7d32;
-  margin:1.2rem 0 0.5rem 0;
-  font-weight:600;
-}
-.ai-box h1 { font-size:1.4rem; }
-.ai-box h2 { font-size:1.25rem; }
-.ai-box h3 { font-size:1.1rem; }
-
-.ai-box p { 
-  margin:0.6rem 0; 
-  color:#333;
-}
-
-.ai-box ul, .ai-box ol {
-  margin:0.5rem 0;
-  padding-left:1.5rem;
-  color:#333;
-}
-
-.ai-box li { 
-  margin:0.3rem 0; 
-}
-
-.ai-box strong { 
-  color:#1b5e20; 
-  font-weight:600;
-}
-
-.ai-box em {
-  color:#388e3c;
-}
-
-.ai-box code {
-  background:#e8f5e9;
-  padding:2px 6px;
-  border-radius:3px;
-  font-family:monospace;
-  font-size:0.9em;
-}
-
-.ai-box pre {
-  background:#263238;
-  color:#f8f8f2;
-  padding:1rem;
-  border-radius:5px;
-  overflow-x:auto;
-  margin:0.8rem 0;
-}
-
-.ai-box pre code {
-  background:none;
-  padding:0;
-  color:inherit;
-  font-size:0.9em;
-}
-
-.ai-box table {
-  width:100%;
-  border-collapse:collapse;
-  margin:1rem 0;
-  font-size:0.95rem;
-}
-
-.ai-box th, .ai-box td {
-  border:1px solid #c8e6c9;
-  padding:8px 12px;
-  text-align:left;
-}
-
-.ai-box th {
-  background:#4CAF50;
-  color:white;
-  font-weight:600;
-}
-
-.ai-box tr:nth-child(even) {
-  background:#f5f5f5;
-}
-
-.ai-box blockquote {
-  border-left:4px solid #4CAF50;
-  margin:1rem 0;
-  padding:0.5rem 1rem;
-  background:#e8f5e9;
-  font-style:italic;
-}
-
-.ai-box hr {
-  border:none;
-  border-top:2px solid #4CAF50;
-  margin:1.5rem 0;
-}
-
-.ai-box a {
-  color:#2e7d32;
-  text-decoration:none;
-}
-.ai-box a:hover {
-  text-decoration:underline;
-}
-
+/* DATE */
 .date-group{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -226,9 +125,7 @@ button:disabled{
 }
 
 @media(max-width:600px){
-  .date-group{
-    grid-template-columns:1fr;
-  }
+  .date-group{ grid-template-columns:1fr; }
 }
 
 </style>
@@ -250,21 +147,18 @@ button:disabled{
 <h3>Date Range</h3>
 <div class="date-group">
   <div>
-    <label for="startDate">Start Date</label>
+    <label>Start Date</label>
     <input type="date" id="startDate">
   </div>
   <div>
-    <label for="endDate">End Date</label>
+    <label>End Date</label>
     <input type="date" id="endDate">
   </div>
 </div>
 
 <button id="summaryBtn">Get Performance Summary</button>
 
-<div id="loading" class="loading" style="display:none;">
-  ⏳ Loading data...
-</div>
-
+<div id="loading" class="loading" style="display:none;">⏳ Loading data...</div>
 <div id="error" class="error"></div>
 
 <div id="summary" class="summary" style="display:none;">
@@ -273,36 +167,69 @@ button:disabled{
 
 <div class="metrics">
 
+<!-- INSTAGRAM -->
 <div class="card">
-<h3 id="igTotal">0</h3>
-<p>Instagram Posts</p>
+  <h3 id="igTotal">0</h3>
+  <p>📸 Instagram Total</p>
 </div>
 
 <div class="card">
-<h3 id="igVideo">0</h3>
-<p>🎥 Video Posts</p>
+  <h3 id="igVideo">0</h3>
+  <p>🎥 Videos</p>
 </div>
 
 <div class="card">
-<h3 id="igCarousel">0</h3>
-<p>🎠 Carousel Posts</p>
+  <h3 id="igCarousel">0</h3>
+  <p>🎠 Carousels</p>
 </div>
 
 <div class="card">
-<h3 id="igStatic">0</h3>
-<p>📷 Static Posts</p>
+  <h3 id="igStatic">0</h3>
+  <p>📷 Static</p>
+</div>
+
+
+
+</div>
+
+<!-- FACEBOOK SECTION -->
+<div class="platform-title">📘 Facebook Performance</div>
+
+<div class="metrics">
+
+<div class="card">
+  <h3 id="fbTotal">0</h3>
+  <p>📘 Total Posts</p>
+</div>
+
+
+
+<div class="card">
+  <h3 id="fbReel">0</h3>
+  <p>🎬 Videos</p>
 </div>
 
 <div class="card">
-<h3 id="ttTotal">0</h3>
-<p>TikTok Videos</p>
+  <h3 id="fbPost">0</h3>
+  <p>📝 Posts</p>
+</div>
+
+</div>
+
+<!-- TIKTOK -->
+<div class="platform-title">🎵 TikTok Performance</div>
+
+<div class="metrics">
+
+<div class="card">
+  <h3 id="ttTotal">0</h3>
+  <p>TikTok Videos</p>
 </div>
 
 </div>
 
 <h2>🤖 AI Performance Summary</h2>
 
-<!-- ✅ Changed from <pre> to <div> for HTML rendering -->
 <div class="ai-box">
   <div id="aiSummary"></div>
 </div>
@@ -313,7 +240,6 @@ button:disabled{
 
 <script>
 
-// ✅ Update this to match your actual API base URL
 const API_BASE = "http://143.110.178.230:5001";
 
 const clientSelect = document.getElementById("clientSelect");
@@ -325,126 +251,90 @@ const summaryDiv = document.getElementById("summary");
 const startDate = document.getElementById("startDate");
 const endDate = document.getElementById("endDate");
 
-// Initialize on load
 window.onload = () => {
   loadClients();
   setDefaultDates();
 };
 
-// Set default date range: last 7 days
 function setDefaultDates(){
   const today = new Date();
   const past = new Date();
   past.setDate(today.getDate() - 7);
 
-  // Format as YYYY-MM-DD for input fields
   startDate.value = past.toISOString().split("T")[0];
   endDate.value = today.toISOString().split("T")[0];
 }
 
-// Load client list from /clients endpoint
 async function loadClients(){
   try{
     const res = await fetch(`${API_BASE}/clients`);
-    if(!res.ok) throw new Error("Failed to fetch clients");
-    
     const clients = await res.json();
+
     clientSelect.innerHTML = '<option value="">-- Choose a client --</option>';
 
-    clients.forEach(client => {
-      const option = document.createElement("option");
-      option.value = client.name;
-      option.textContent = client.name;
-      clientSelect.appendChild(option);
+    clients.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.name;
+      opt.textContent = c.name;
+      clientSelect.appendChild(opt);
     });
 
   }catch(err){
-    console.error("Client load error:", err);
-    clientSelect.innerHTML = '<option>Error loading clients</option>';
-    showError("Could not load client list. Please check your API connection.");
+    errorDiv.textContent = "Failed to load clients";
   }
 }
 
-// Show error message
-function showError(message){
-  errorDiv.textContent = message;
-  errorDiv.style.display = "block";
-  setTimeout(() => {
-    errorDiv.style.display = "none";
-  }, 5000);
-}
+summaryBtn.onclick = async () => {
 
-// Main summary fetch function
-summaryBtn.onclick = getSummary;
+  const client = clientSelect.value;
+  if(!client) return alert("Select client");
 
-async function getSummary(){
-  const clientName = clientSelect.value;
-  const start = startDate.value;
-  const end = endDate.value;
-
-  // Validation
-  if(!clientName){
-    alert("Please select a client.");
-    return;
-  }
-  if(!start || !end){
-    alert("Please select both start and end dates.");
-    return;
-  }
-  if(new Date(start) > new Date(end)){
-    alert("Start date cannot be after end date.");
-    return;
-  }
-
-  // UI state: loading
   summaryBtn.disabled = true;
   loading.style.display = "block";
-  errorDiv.style.display = "none";
   summaryDiv.style.display = "none";
 
   try{
-    // ✅ Corrected endpoint & parameter names to match Flask route
-    const res = await fetch(
-      `${API_BASE}/summary/${encodeURIComponent(clientName)}/range?start_date=${start}&end_date=${end}`
-    );
 
-    if(!res.ok){
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `HTTP ${res.status}`);
-    }
+    const res = await fetch(
+      `${API_BASE}/summary/${encodeURIComponent(client)}/range?start_date=${startDate.value}&end_date=${endDate.value}`
+    );
 
     const data = await res.json();
 
-    // ✅ Parse pre-calculated metrics from API response
     const ig = data.summary.instagram || {};
+    const fb = data.summary.facebook || {};
     const tt = data.summary.tiktok || {};
 
-    // Update metric cards
+    // Instagram
     document.getElementById("igTotal").textContent = ig.total ?? 0;
     document.getElementById("igVideo").textContent = ig.video ?? 0;
     document.getElementById("igCarousel").textContent = ig.carousel ?? 0;
     document.getElementById("igStatic").textContent = ig.static ?? 0;
+ 
+
+
+    // Facebook
+    document.getElementById("fbTotal").textContent = fb.total ?? 0;
+    document.getElementById("fbReel").textContent = fb.reel ?? 0;
+    document.getElementById("fbPost").textContent = fb.post ?? 0;
+
+    // TikTok
     document.getElementById("ttTotal").textContent = tt.total ?? 0;
 
-    // ✅ Use AI summary from API (with fallback) + render Markdown
-    const aiText = data.summary.ai_summary || "No AI summary available.";
-    
-    // 🎯 Render Markdown safely with marked.js + DOMPurify
-    const cleanHTML = DOMPurify.sanitize(marked.parse(aiText));
-    document.getElementById("aiSummary").innerHTML = cleanHTML;
+    // AI
+    const aiText = data.summary.ai_summary || "";
+    document.getElementById("aiSummary").innerHTML =
+      DOMPurify.sanitize(marked.parse(aiText));
 
-    // Show results
     summaryDiv.style.display = "block";
 
   }catch(err){
-    console.error("Summary fetch error:", err);
-    showError(`Error: ${err.message}. Please try again.`);
+    errorDiv.textContent = err.message;
   }finally{
-    // Reset UI state
     loading.style.display = "none";
     summaryBtn.disabled = false;
   }
-}
+};
 
 </script>
 
