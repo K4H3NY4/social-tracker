@@ -288,7 +288,7 @@ class Client(Base):
 
 # ================= FACEBOOK POST MODEL =================
 
-    class FacebookPost(Base):
+class FacebookPost(Base):
         """Facebook posts model (table: facebook_posts)"""
 
         __tablename__ = "facebook_posts"
