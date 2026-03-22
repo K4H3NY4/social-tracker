@@ -283,6 +283,104 @@ class Client(Base):
         db.commit()
 
 
+
+
+
+# ================= FACEBOOK POST MODEL =================
+
+    class FacebookPost(Base):
+        """Facebook posts model (table: facebook_posts)"""
+
+        __tablename__ = "facebook_posts"
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        post_id = Column(Text, unique=True, nullable=False, index=True)
+        user_username_raw = Column(Text, nullable=True, index=True)
+        content = Column(Text, nullable=True)
+        post_type = Column(Text, nullable=True)
+        date_posted = Column(DateTime, nullable=True, index=True)
+
+        def __repr__(self) -> str:
+            return f"<FacebookPost post_id='{self.post_id}' user='{self.user_username_raw}'>"
+
+        def to_dict(self) -> dict:
+            return {
+                "id": self.id,
+                "post_id": self.post_id,
+                "user_username_raw": self.user_username_raw,
+                "content": self.content,
+                "post_type": self.post_type,
+                "date_posted": self.date_posted.strftime("%Y-%m-%d %H:%M:%S") if self.date_posted else None
+            }
+
+        # ================= QUERIES =================
+
+        @classmethod
+        def get_by_post_id(cls, db, post_id: str) -> Optional['FacebookPost']:
+            return db.query(cls).filter(cls.post_id == post_id).first()
+
+        @classmethod
+        def get_all(cls, db, limit: int = 100) -> List['FacebookPost']:
+            return db.query(cls).order_by(cls.date_posted.desc()).limit(limit).all()
+
+        @classmethod
+        def get_by_username(cls, db, username: str) -> List['FacebookPost']:
+            return db.query(cls).filter(
+                cls.user_username_raw == username
+            ).order_by(cls.date_posted.desc()).all()
+
+        @classmethod
+        def get_last_7_days_by_username(cls, db, username: str) -> List['FacebookPost']:
+            from datetime import timedelta
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+
+            return db.query(cls).filter(
+                cls.user_username_raw == username,
+                cls.date_posted >= seven_days_ago
+            ).order_by(cls.date_posted.desc()).all()
+
+        @classmethod
+        def search_by_content(cls, db, keyword: str) -> List['FacebookPost']:
+            return db.query(cls).filter(
+                cls.content.ilike(f"%{keyword}%")
+            ).order_by(cls.date_posted.desc()).all()
+
+        @classmethod
+        def count(cls, db) -> int:
+            return db.query(cls).count()
+
+        # ================= SAVE =================
+
+        def save(self, db) -> 'FacebookPost':
+            # Convert ISO string → datetime
+            if isinstance(self.date_posted, str):
+                self.date_posted = datetime.fromisoformat(
+                    self.date_posted.replace("Z", "+00:00")
+                )
+
+            existing = db.query(FacebookPost).filter(
+                FacebookPost.post_id == self.post_id
+            ).first()
+
+            if existing:
+                existing.user_username_raw = self.user_username_raw
+                existing.content = self.content
+                existing.post_type = self.post_type
+                existing.date_posted = self.date_posted
+
+                db.commit()
+                db.refresh(existing)
+                return existing
+
+            db.add(self)
+            db.commit()
+            db.refresh(self)
+            return self
+
+        def delete(self, db) -> None:
+            db.delete(self)
+            db.commit()
+
 # ================= DATABASE INITIALIZATION =================
 
 def init_db():

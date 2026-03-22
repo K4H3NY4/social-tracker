@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from models import SessionLocal, init_db, Post, Client
 from models import TikTokVideo
+from models import FacebookPost
 import datetime
 from datetime import datetime, timedelta, timezone
 from google import genai
@@ -538,50 +539,56 @@ def summary_last_7days_count(client_name):
     finally:
         db.close()
 
-
 @app.route("/summary/<client_name>/range", methods=["GET"])
 def summary_date_range(client_name):
     db = SessionLocal()
+
     try:
-        # ================= 1. PARSE DATE RANGE =================
+        # ================= 1. DATE RANGE =================
         start_str = request.args.get('start_date')
         end_str = request.args.get('end_date')
 
         if not start_str or not end_str:
-            return jsonify({"error": "Missing required query parameters: 'start_date' and 'end_date' (Format: YYYY-MM-DD)"}), 400
+            return jsonify({"error": "Missing start_date and end_date"}), 400
 
         try:
             start_dt = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            end_dt = datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+            end_dt = datetime.strptime(end_str, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59, tzinfo=timezone.utc
+            )
         except ValueError:
-            return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
+            return jsonify({"error": "Invalid date format YYYY-MM-DD"}), 400
 
-        # ================= 2. FETCH CLIENT =================
+        # ================= 2. CLIENT =================
         client = db.query(Client).filter(Client.name == client_name).first()
         if not client:
-            return jsonify({"error": f"Client '{client_name}' not found"}), 404
+            return jsonify({"error": "Client not found"}), 404
 
-        # ================= 3. INSTAGRAM POSTS =================
+        # ================= 3. INSTAGRAM =================
         ig_posts_query = []
-        ig_count = ig_video_count = ig_carousel_count = ig_static_count = 0
+        ig_count = ig_video = ig_carousel = ig_static = 0
 
         if client.instagram:
-            base_query = db.query(Post).filter(
+            base = db.query(Post).filter(
                 Post.username == client.instagram,
                 Post.taken_at >= start_dt,
                 Post.taken_at <= end_dt
             )
 
-            ig_count = base_query.count()
-            ig_video_count = base_query.filter(Post.video_versions != 'null').count()
-            ig_carousel_count = base_query.filter(Post.carousel_media.isnot('null')).count()
-            ig_static_count = base_query.filter(Post.video_versions.is_('null'), Post.carousel_media.is_('null')).count()
+            ig_count = base.count()
+            ig_video = base.filter(Post.video_versions != 'null').count()
+            ig_carousel = base.filter(Post.carousel_media != 'null').count()
+            ig_static = base.filter(
+                Post.video_versions == 'null',
+                Post.carousel_media == 'null'
+            ).count()
 
-            ig_posts_query = base_query.with_entities(Post.caption, Post.taken_at, Post.video_versions, Post.carousel_media).all()
+            ig_posts_query = base.all()
 
-        # ================= 4. TIKTOK POSTS =================
-        tt_posts_query = []
+        # ================= 4. TIKTOK =================
         tt_count = 0
+        tt_posts_query = []
+
         if client.tiktok:
             base_tt = db.query(TikTokVideo).filter(
                 TikTokVideo.author == client.tiktok,
@@ -590,39 +597,85 @@ def summary_date_range(client_name):
             )
 
             tt_count = base_tt.count()
-            tt_posts_query = base_tt.with_entities(TikTokVideo.description, TikTokVideo.create_time).all()
+            tt_posts_query = base_tt.all()
 
-        # ================= 5. FORMAT POSTS =================
+        # ================= 5. FACEBOOK =================
+        fb_count = fb_photo = fb_reel = fb_post = 0
+        fb_hour_distribution = {}
+        fb_posts_query = []
+
+        if client.facebook:
+            base_fb = db.query(FacebookPost).filter(
+                FacebookPost.user_username_raw == client.facebook,
+                FacebookPost.date_posted >= start_dt,
+                FacebookPost.date_posted <= end_dt
+            )
+
+            fb_count = base_fb.count()
+            fb_reel = base_fb.filter(FacebookPost.post_type.ilike("reel")).count()
+            fb_post = base_fb.filter(FacebookPost.post_type.ilike("post")).count()
+
+            fb_posts = base_fb.all()
+
+            # time analysis (hourly distribution)
+            for p in fb_posts:
+                fb_posts_query.append(p)
+
+                if p.date_posted:
+                    hour = p.date_posted.hour
+                    fb_hour_distribution[hour] = fb_hour_distribution.get(hour, 0) + 1
+
+        # ================= 6. FORMAT POSTS =================
         posts = []
 
         for p in ig_posts_query:
             posts.append({
                 "platform": "instagram",
                 "caption": p.caption,
-                "taken_at": p.taken_at.isoformat(),
-                "video_versions": p.video_versions,
-                "carousel_media": p.carousel_media
+                "taken_at": p.taken_at.isoformat() if p.taken_at else None
             })
 
         for p in tt_posts_query:
             posts.append({
                 "platform": "tiktok",
                 "description": p.description,
-                "create_time": p.create_time.isoformat()
+                "create_time": p.create_time.isoformat() if p.create_time else None
             })
 
-        # ================= 6. AI SUMMARY =================
+        for p in fb_posts_query:
+            posts.append({
+                "platform": "facebook",
+                "content": p.content,
+                "post_type": p.post_type,
+                "date_posted": p.date_posted.isoformat() if p.date_posted else None
+            })
+
+        # ================= 7. AI SUMMARY =================
         ai_summary = "AI summary generation unavailable."
+
         try:
             prompt = (
-                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n\n"
-                f"Client Name: {client.name}\n\n"
+                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Client Name: {client.name}\n"
+                f"Instagram: {client.instagram or 'Not linked'}\n"
+                f"TikTok: {client.tiktok or 'Not linked'}\n"
+                f"Facebook: {client.facebook or 'Not linked'}\n"
                 f"Contract: {client.contract or 'N/A'}\n\n"
-                f"Instagram: {client.instagram or 'Not linked'}\n\n"
-                f"TikTok: {client.tiktok or 'Not linked'}\n\n"
-                f"Instagram Posts: {ig_count} (Video: {ig_video_count}, Carousel: {ig_carousel_count}, Static: {ig_static_count})\n\n"
-                f"TikTok Posts: {tt_count}\n\n"
-                f"Generate a brief executive report for the period {start_str} to {end_str}. "
+                f"📈 INSTAGRAM METRICS:\n"
+                f"   • Total Posts: {ig_count}\n"
+                f"   • 🎥 Video Posts: {ig_video}\n"
+                f"   • 🎠 Carousel Posts: {ig_carousel}\n"
+                f"   • 📷 Static Posts: {ig_static}\n\n"
+                f"📈 TIKTOK METRICS:\n"
+                f"   • Total Videos: {tt_count}\n\n"
+                f"📈 FACEBOOK METRICS:\n"
+                f"   • Total Posts: {fb_count}\n"
+                f"   • 🎥 Reels: {fb_reel}\n"
+                f"   • 📝 Standard Posts: {fb_post}\n"
+                f"   • 🕐 Peak Posting Hour: {max(fb_hour_distribution, key=fb_hour_distribution.get) if fb_hour_distribution else 'N/A'}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Generate a brief executive report for the period {start_str} to {end_str}. "
                 f"TASK: Analyze if posting frequency and content mix meets expectations based on the contract {client.contract}.\n"
                 f"The report should include:Executive Summary Provide a concise overview of the client’s social media activity, highlighting key patterns in posting frequency, platform usage, and content types."
                 f"Strategic Recommendations  \n"
@@ -633,28 +686,37 @@ def summary_date_range(client_name):
                 f"    - Keep the tone professional and suitable for executives."
                 f"    - This report was generated by crAIg, Creative Edge’s AI-powered reporting assistant."
             )
+
             response = genai_client.models.generate_content(
                 model="gemini-3-flash-preview",
                 contents=prompt
             )
-            ai_summary = response.text
-        except Exception as ai_error:
-            print(f"⚠️ AI Generation Error: {ai_error}")
-            ai_summary = "Unable to generate AI summary at this time."
 
-        # ================= 7. RETURN RESPONSE =================
+            ai_summary = response.text
+
+        except Exception as e:
+            print("AI Error:", e)
+            ai_summary = "AI summary unavailable."
+
+        # ================= 8. RESPONSE =================
         return jsonify({
             "status": "success",
             "period": f"{start_str} to {end_str}",
             "summary": {
                 "instagram": {
-                    "video": ig_video_count,
-                    "carousel": ig_carousel_count,
-                    "static": ig_static_count,
-                    "total": ig_count
+                    "total": ig_count,
+                    "video": ig_video,
+                    "carousel": ig_carousel,
+                    "static": ig_static
                 },
                 "tiktok": {
                     "total": tt_count
+                },
+                "facebook": {
+                    "total": fb_count,
+                    "reel": fb_reel,
+                    "post": fb_post,
+                    "hour_distribution": fb_hour_distribution
                 },
                 "ai_summary": ai_summary
             },
@@ -662,8 +724,133 @@ def summary_date_range(client_name):
         })
 
     except Exception as e:
-        print(f"❌ Server Error: {e}")
+        print("❌ Server Error:", e)
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
+
+    finally:
+        db.close()
+
+# ================= CREATE / UPDATE FACEBOOK POST =================
+@app.route("/facebook/posts", methods=["POST"])
+def create_facebook_post():
+    db = SessionLocal()
+
+    try:
+        data = request.json
+
+        post = FacebookPost(
+            post_id=data["post_id"],
+            user_username_raw=data.get("user_username_raw"),
+            content=data.get("content"),
+            post_type=data.get("post_type"),
+            date_posted=data.get("date_posted")  # ISO string allowed
+        )
+
+        saved = post.save(db)
+
+        return jsonify({
+            "status": "success",
+            "data": saved.to_dict()
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+    finally:
+        db.close()
+
+
+# ================= GET ALL POSTS =================
+@app.route("/facebook/posts", methods=["GET"])
+def get_facebook_posts():
+    db = SessionLocal()
+
+    try:
+        limit = request.args.get("limit", 100, type=int)
+
+        posts = FacebookPost.get_all(db, limit=limit)
+
+        return jsonify({
+            "status": "success",
+            "count": len(posts),
+            "data": [p.to_dict() for p in posts]
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        db.close()
+
+
+# ================= GET BY USERNAME =================
+@app.route("/facebook/posts/user/<username>", methods=["GET"])
+def get_facebook_posts_by_user(username):
+    db = SessionLocal()
+
+    try:
+        posts = FacebookPost.get_by_username(db, username)
+
+        return jsonify({
+            "status": "success",
+            "user": username,
+            "count": len(posts),
+            "data": [p.to_dict() for p in posts]
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        db.close()
+
+
+# ================= GET BY POST ID =================
+@app.route("/facebook/posts/<post_id>", methods=["GET"])
+def get_facebook_post(post_id):
+    db = SessionLocal()
+
+    try:
+        post = FacebookPost.get_by_post_id(db, post_id)
+
+        if not post:
+            return jsonify({"error": "Post not found"}), 404
+
+        return jsonify({
+            "status": "success",
+            "data": post.to_dict()
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        db.close()
+
+
+# ================= DELETE POST =================
+@app.route("/facebook/posts/<post_id>", methods=["DELETE"])
+def delete_facebook_post(post_id):
+    db = SessionLocal()
+
+    try:
+        post = FacebookPost.get_by_post_id(db, post_id)
+
+        if not post:
+            return jsonify({"error": "Post not found"}), 404
+
+        post.delete(db)
+
+        return jsonify({
+            "status": "deleted",
+            "post_id": post_id
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     finally:
         db.close()
