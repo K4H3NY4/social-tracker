@@ -3,7 +3,7 @@ from datetime import datetime
 from models import SessionLocal, TikTokVideo
 
 # ================= CONFIGURATION =================
-JSON_FILE = "festivebreadke_videos.json"  # path to your JSON file
+JSON_FILE = "tiktok-sample.json"  # path to your JSON file
 # =================================================
 
 # ================= DATABASE SESSION =================
@@ -17,12 +17,14 @@ try:
     # 2️⃣ Loop through each video and save to DB
     for item in json_data:
         # Convert UNIX timestamp to datetime
-        dt = datetime.utcfromtimestamp(item["create_time"])
+     
+        dt = datetime.fromisoformat(item["create_time"].replace("Z", "+00:00"))
 
         video = TikTokVideo(
-            video_id=item["video_id"],
-            author=item.get("author"),
+            video_id=item["post_id"],
+            author=item.get("account_id"),
             description=item.get("description"),
+            post_type=item.get("post_type"),
             create_time=dt
         )
 

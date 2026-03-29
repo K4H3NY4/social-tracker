@@ -1,0 +1,17 @@
+    - Status Update: March 2026
+        - We can pull data from IG, Tiktok and Facebook.
+        - Proof of Concept is working.
+        - Identified the APIs we need (https://brightdata.com/ ( $1.5 /1K Records), Gemini API)
+
+    - Next steps: 
+        - Use caption to analyse the content of the post.
+        - Add more clients (Scaling up). 
+        - Automate the scraping process.
+        - Create an interface that enters clients and summaries clients contracts.
+
+    - Timelines:
+        - Scaling up and automation -> 2 week
+        - Contract upload and summary -> 2 week
+    
+
+    Phase 2: Influencer Marketing Analysis and Reporting. ****

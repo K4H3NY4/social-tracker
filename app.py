@@ -1,883 +1,899 @@
-from flask import Flask, render_template, request, jsonify
-from models import SessionLocal, init_db, Post, Client
-from models import TikTokVideo
-from models import FacebookPost
-import datetime
-from datetime import datetime, timedelta, timezone
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from datetime import datetime
 from google import genai
 import os
+import json
 from dotenv import load_dotenv
 
+from db.session import SessionLocal
+from models.facebook import FacebookPost
+from models.instagram import InstagramPost
+from models.tiktok import TikTokVideo
+from models.client import Client
 
-# Load .env file
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-# Get the API key from environment variables
-api_key = os.environ.get("API_KEY")  
-genai_client = genai.Client(api_key=api_key)
+# ✅ Enable CORS (optional, for separate frontend)
+
+CORS(app)
+
+# ✅ Initialize Google GenAI Client
+api_key = os.environ.get("API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
 
+# ═══════════════════════════════════════════════════════
+# ✅ DASHBOARD ROUTE
+# ═══════════════════════════════════════════════════════
 
-# initialize database
-init_db()
-
-
-# ================= DB SESSION HELPER =================
-
-def get_db():
-    return SessionLocal()
-
-
-@app.route("/")
-def index():
-    db = get_db()
-    try:
-        clients = db.query(Client).all()
-        return render_template("index.html", clients=clients)
-    finally:
-        db.close()
+@app.route('/')
+def dashboard():
+    """Serve the dashboard HTML file"""
+    return send_from_directory('templates', 'index.html')
 
 
-# ================= POSTS API =================
+# ═══════════════════════════════════════════════════════
+# ✅ HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════
 
-@app.route("/posts", methods=["GET"])
-def get_posts():
-    db = get_db()
-
-    limit = request.args.get("limit", 100)
-
-    try:
-        posts = Post.get_all(db, int(limit))
-        return jsonify([p.to_dict() for p in posts])
-    finally:
-        db.close()
-
-
-@app.route("/posts/<code>", methods=["GET"])
-def get_post(code):
-    db = get_db()
-
-    try:
-        post = Post.get_by_code(db, code)
-
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
-
-        return jsonify(post.to_dict())
-    finally:
-        db.close()
-
-
-@app.route("/posts", methods=["POST"])
-def create_post():
-    db = get_db()
-
-    try:
-        data = request.get_json()
-
-        if not data or "code" not in data:
-            return jsonify({"error": "code is required"}), 400
-
-        post = Post(
-            code=data["code"],
-            caption=data.get("caption"),
-            taken_at=data.get("taken_at"),
-            username=data.get("username")
-        )
-
-        post = post.save(db)
-
-        return jsonify(post.to_dict())
-
-    finally:
-        db.close()
-
-
-@app.route("/posts/search", methods=["GET"])
-def search_posts():
-    db = get_db()
-
-    keyword = request.args.get("q")
-
-    if not keyword:
-        return jsonify({"error": "q query parameter required"}), 400
-
-    try:
-        posts = Post.search_by_caption(db, keyword)
-        return jsonify([p.to_dict() for p in posts])
-    finally:
-        db.close()
-
-
-@app.route("/posts/user/<username>", methods=["GET"])
-def posts_by_user(username):
-    db = get_db()
-
-    try:
-        posts = Post.get_by_username(db, username)
-        return jsonify([p.to_dict() for p in posts])
-    finally:
-        db.close()
-
-
-@app.route("/posts/<code>", methods=["DELETE"])
-def delete_post(code):
-    db = get_db()
-
-    try:
-        post = Post.get_by_code(db, code)
-
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
-
-        post.delete(db)
-
-        return jsonify({"message": "Post deleted"})
-    finally:
-        db.close()
-
-
-# ================= DATE RANGE =================
-
-@app.route("/posts/<username>/range", methods=["GET"])
-def posts_by_user_date_range(username):
-    db = get_db()
-
-    start_date = request.args.get("start")
-    end_date = request.args.get("end")
-
-    if not start_date or not end_date:
-        return jsonify({
-            "error": "start and end query parameters required"
-        }), 400
-
-    try:
-        posts = Post.get_by_username_date_range(
-            db,
-            username,
-            start_date,
-            end_date
-        )
-
-        return jsonify([p.to_dict() for p in posts])
-
-    finally:
-        db.close()
-
-
-@app.route("/posts/<username>/last7days", methods=["GET"])
-def posts_last_7_days(username):
-
-    db = SessionLocal()
-
-    # get posts for the last 7 days
-    posts = Post.get_last_7_days_by_username(db, username)
-
-    # convert to dict
-    posts_list = [p.to_dict() for p in posts]
-
-    # include count
-    result = {
-        "count": len(posts_list),
-        "posts": posts_list
+# ✅ Helper: Count Facebook posts vs videos
+def count_facebook_content(posts: list) -> dict:
+    post_count = 0
+    video_count = 0
+    
+    for post in posts:
+        raw_type = post.get('post_type', '').strip().lower()
+        
+        if raw_type in ['reel', 'reels', 'video', 'videos', 'vid', 'vids',
+                        'animation', 'animations', 'animated', 'anim', 'anims']:
+            video_count += 1
+        else:
+            post_count += 1
+    
+    return {
+        'posts': post_count,
+        'videos': video_count,
+        'total': post_count + video_count
     }
 
-    db.close()
 
-    return jsonify(result)
-
-
-# ================= TIKTOK API =================
-
-@app.route("/tiktok", methods=["GET"])
-def get_tiktok_videos():
-    db = get_db()
-    limit = request.args.get("limit", 100)
-
-    try:
-        videos = TikTokVideo.get_all(db, int(limit))
-        return jsonify([v.to_dict() for v in videos])
-    finally:
-        db.close()
-
-
-@app.route("/tiktok/<video_id>", methods=["GET"])
-def get_tiktok_video(video_id):
-    db = get_db()
-
-    try:
-        video = TikTokVideo.get_by_video_id(db, video_id)
-
-        if not video:
-            return jsonify({"error": "Video not found"}), 404
-
-        return jsonify(video.to_dict())
-    finally:
-        db.close()
-
-
-@app.route("/tiktok/author/<author>", methods=["GET"])
-def tiktok_videos_by_author(author):
-    db = get_db()
-
-    try:
-        videos = TikTokVideo.get_by_author(db, author)
-        return jsonify([v.to_dict() for v in videos])
-    finally:
-        db.close()
-
-
-@app.route("/tiktok/author/<author>/last7days", methods=["GET"])
-def tiktok_last_7_days(author):
-    db = get_db()
-
-    try:
-        videos = TikTokVideo.get_last_7_days_by_author(db, author)
-        videos_list = [v.to_dict() for v in videos]
-
-        result = {
-            "count": len(videos_list),
-            "videos": videos_list
-        }
-
-        return jsonify(result)
-    finally:
-        db.close()
-
-
-@app.route("/tiktok", methods=["POST"])
-def create_tiktok_video():
-    db = get_db()
-
-    try:
-        data = request.get_json()
-
-        required_fields = ["video_id", "author"]
-        if not data or not all(field in data for field in required_fields):
-            return jsonify({"error": f"{', '.join(required_fields)} required"}), 400
-
-        video = TikTokVideo(
-            video_id=data["video_id"],
-            author=data.get("author"),
-            description=data.get("description"),
-            create_time=data.get("create_time")
-        )
-
-        video = video.save(db)
-
-        return jsonify(video.to_dict())
-
-    finally:
-        db.close()
-
-
-@app.route("/tiktok/<video_id>", methods=["DELETE"])
-def delete_tiktok_video(video_id):
-    db = get_db()
-
-    try:
-        video = TikTokVideo.get_by_video_id(db, video_id)
-
-        if not video:
-            return jsonify({"error": "Video not found"}), 404
-
-        video.delete(db)
-        return jsonify({"message": "Video deleted"})
-    finally:
-        db.close()
-
-
-# ================= CLIENTS API =================
-
-@app.route("/clients", methods=["GET"])
-def get_clients():
-    db = get_db()
-
-    try:
-        clients = Client.get_all(db)
-        return jsonify([c.to_dict() for c in clients])
-    finally:
-        db.close()
-
-
-@app.route("/clients/<int:client_id>", methods=["GET"])
-def get_client(client_id):
-    db = get_db()
-
-    try:
-        client = Client.get_by_id(db, client_id)
-
-        if not client:
-            return jsonify({"error": "Client not found"}), 404
-
-        result = client.to_dict()
-        result["posts"] = [p.to_dict() for p in client.get_posts(db)]
-
-        return jsonify(result)
-
-    finally:
-        db.close()
-
-
-@app.route("/clients", methods=["POST"])
-def create_client():
-    db = get_db()
-
-    try:
-        data = request.get_json()
-
-        if not data or "name" not in data:
-            return jsonify({"error": "name is required"}), 400
-
-        client = Client(
-            name=data["name"],
-            instagram=data.get("instagram"),
-            facebook=data.get("facebook"),
-            tiktok=data.get("tiktok"),
-            contract=data.get("contract")
-        )
-
-        client = client.save(db)
-
-        return jsonify(client.to_dict())
-
-    finally:
-        db.close()
-
-
-@app.route("/clients/search", methods=["GET"])
-def search_clients():
-    db = get_db()
-
-    keyword = request.args.get("q")
-
-    if not keyword:
-        return jsonify({"error": "q query parameter required"}), 400
-
-    try:
-        clients = Client.search_by_name(db, keyword)
-        return jsonify([c.to_dict() for c in clients])
-    finally:
-        db.close()
-
-
-@app.route("/clients/<int:client_id>", methods=["PUT"])
-def edit_client(client_id):
-    db = get_db()  # get a database session
-
-    try:
-        client = Client.get_by_id(db, client_id)
-
-        if not client:
-            return jsonify({"error": "Client not found"}), 404
-
-        data = request.json
-
-        # Update only provided fields
-        client.name = data.get("name", client.name)
-        client.instagram = data.get("instagram", client.instagram)
-        client.facebook = data.get("facebook", client.facebook)
-        client.tiktok = data.get("tiktok", client.tiktok)
-        client.contract = data.get("contract", client.contract)
-
-        client.save(db)
-
-        return jsonify({
-            "message": "Client updated successfully",
-            "client": client.to_dict()
-        })
-
-    finally:
-        db.close()
-
-
-@app.route("/clients/<int:client_id>", methods=["DELETE"])
-def delete_client(client_id):
-    db = get_db()
-
-    try:
-        client = Client.get_by_id(db, client_id)
-
-        if not client:
-            return jsonify({"error": "Client not found"}), 404
-
-        client.delete(db)
-
-        return jsonify({"message": "Client deleted"})
-
-    finally:
-        db.close()
-
-
-@app.route("/summary/<client_name>/7days", methods=["GET"])
-def summary_last_7days_count(client_name):
-    db = SessionLocal()
-    try:
-        # ✅ Calculate date (timezone aware - not deprecated)
-   
-        seven_days_ago = datetime.utcnow() - timedelta(days=8)
-
-        # ✅ Fetch Client
-        client = db.query(Client).filter(Client.name == client_name).first()
-        if not client:
-            return jsonify({"error": f"Client '{client_name}' not found"}), 404
-
-        # ================= INSTAGRAM COUNTS =================
-        ig_count = 0
-        ig_video_count = 0
-        ig_carousel_count = 0
-        ig_static_count = 0
-
-        if client.instagram:
-            # Base query for last 7 days
-            base_query = db.query(Post).filter(
-                Post.username == client.instagram,
-                Post.taken_at >= seven_days_ago
-            )
-
-            # Total Instagram posts
-            ig_count = base_query.count()
-
-            # Video posts (video_versions IS NOT NULL)
-            ig_video_count = base_query.filter(
-                Post.video_versions != 'null'
-            ).count()
-
-            # Carousel posts (carousel_media IS NOT NULL)
-            ig_carousel_count = base_query.filter(
-                Post.carousel_media.isnot('null')
-            ).count()
-
-            # Static posts (BOTH are NULL)
-            ig_static_count = base_query.filter(
-                Post.video_versions.is_('null'),
-                Post.carousel_media.is_('null')
-            ).count()
-
-        # ================= TIKTOK COUNTS =================
-        tt_count = 0
-        if client.tiktok:
-            tt_count = db.query(TikTokVideo).filter(
-                TikTokVideo.author == client.tiktok,
-                TikTokVideo.create_time >= seven_days_ago
-            ).count()
-
-        # ================= GENERATE AI SUMMARY =================
-        ai_summary = "AI summary generation unavailable."
+# ✅ Helper: Count Instagram content types (carousel, image, video)
+def count_instagram_content_types(posts: list) -> dict:
+    """
+    Count Instagram posts by content_type field
+    - Carousel
+    - Image  
+    - Video (includes Reel, Video, Animation)
+    """
+    carousel_count = 0
+    image_count = 0
+    video_count = 0
+    
+    for post in posts:
+        content_type = post.get('content_type', '').strip().lower()
         
-        try:
-            prompt = (
-                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"Client Name: {client.name}\n"
-                f"Instagram: {client.instagram or 'Not linked'}\n"
-                f"TikTok: {client.tiktok or 'Not linked'}\n"
-                f"Facebook: {client.facebook or 'Not linked'}\n"
-                f"Contract: {client.contract or 'N/A'}\n\n"
-                f"📈 INSTAGRAM METRICS:\n"
-                f"   • Total Posts: {ig_count}\n"
-                f"   • 🎥 Video Posts: {ig_video_count}\n"
-                f"   • 🎠 Carousel Posts: {ig_carousel_count}\n"
-                f"   • 📷 Static Posts: {ig_static_count}\n\n"
-                f"📈 TIKTOK METRICS:\n"
-                f"   • Total Videos: {tt_count}\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"TASK: Analyze if posting frequency and content mix meets expectations.\n"
-                f"Consider: Video engagement typically outperforms static posts.\n"
-                f"Provide brief executive summary and recommendations for the period {start_str} to {end_str}.\n\n"
-                f"⚠️ FORMATTING RULES (STRICT):\n"
-                f"- Use PLAIN TEXT ONLY — NO Markdown syntax\n"
-                f"- Do NOT use: **bold**, *italic*, ### headers, | tables |, or --- dividers\n"
-                f"- Use emojis and simple line breaks for visual structure\n"
-                f"- Use ALL CAPS or emojis for emphasis instead of bold/italic\n"
-                f"- Format numbers and lists with simple bullets (•) or dashes (-)\n"
-                f"- Format all output as plain text with no markdown\n\n"
-                f"- Use actual table where posible.\n"
-                f"Example of desired format:\n"
-                f"📊 EXECUTIVE SUMMARY\n"
-                f"The account is over-performing with 24 Instagram posts in 6 weeks...\n\n"
-                f"💡 RECOMMENDATIONS\n"
-                f"• Optimize content mix: shift static posts to video\n"
-                f"• Repurpose top TikToks as Instagram Reels\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            )
+        if content_type in ['carousel', 'carousels', 'album']:
+            carousel_count += 1
+        elif content_type in ['image', 'images', 'photo', 'photos', 'picture']:
+            image_count += 1
+        elif content_type in ['video', 'videos', 'reel', 'reels', 'vid', 'vids',
+                              'animation', 'animations', 'animated', 'anim', 'anims']:
+            video_count += 1
+        else:
+            image_count += 1  # Default to image if unknown
+    
+    return {
+        'carousel': carousel_count,
+        'image': image_count,
+        'video': video_count,
+        'total': carousel_count + image_count + video_count
+    }
 
-            response = genai_client.models.generate_content(
-                model="gemini-3-flash-preview",  # ✅ Use valid model name
-                contents=prompt
-            )
-            ai_summary = response.text
 
-        except Exception as ai_error:
-            print(f"⚠️ AI Generation Error: {ai_error}")
-            ai_summary = "Unable to generate AI summary at this time. Please try again later."
 
-        # ================= RETURN RESPONSE =================
-        return jsonify({
-            "status": "success",
-            "period": "last_7_days",
-            "summary": {
-                "instagram": {
-                    "video": ig_video_count,
-                    "carousel": ig_carousel_count,
-                    "static": ig_static_count,
-                    "total": ig_count,
-                },
-                "tiktok": {
-                    "total": tt_count
-                },
-                "ai_summary": ai_summary
-            }
-        })
+# ✅ Helper: Count TikTok content (mostly videos, some images)
+def count_tiktok_content(posts: list) -> dict:
+    video_count = 0
+    image_count = 0
+    
+    for post in posts:
+        raw_type = post.get('post_type', '').strip().lower()
+        
+        if raw_type in ['video', 'videos', 'vid', 'vids']:
+            video_count += 1
+        elif raw_type in ['image', 'images', 'photo', 'photos', 'picture']:
+            image_count += 1
+        else:
+            video_count += 1
+    
+    return {
+        'videos': video_count,
+        'images': image_count,
+        'total': video_count + image_count
+    }
 
-    except Exception as e:
-        print(f"❌ Server Error: {e}")
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
-    finally:
-        db.close()
+# ✅ Helper: Count collaborative posts (Instagram only)
+def count_collaborative_posts(posts: list, username: str = None) -> dict:
+    """
+    Count posts with co-authors/producers
+    If username is provided, count posts where username appears in coauthor_producers
+    """
+    collaborative_count = 0
+    solo_count = 0
+    
+    for post in posts:
+        coauthors = post.get('coauthor_producers', '')
+        user_posted = post.get('user_posted', '')
+        
+        # Check if this is a collaboration
+        is_collab = False
+        
+        if username:
+            # Check if username is in coauthor_producers
+            if coauthors and username in coauthors:
+                is_collab = True
+            # Or if user_posted != username but they're listed as co-author
+            elif user_posted != username and coauthors and username in coauthors:
+                is_collab = True
+        else:
+            # Generic check - just see if there are coauthors
+            if coauthors and coauthors.strip():
+                is_collab = True
+        
+        if is_collab:
+            collaborative_count += 1
+        else:
+            solo_count += 1
+    
+    total = collaborative_count + solo_count
+    
+    return {
+        'collaborative': collaborative_count,
+        'solo': solo_count,
+        'total': total,
+        'collaboration_rate': round((collaborative_count / total * 100), 2) if total > 0 else 0
+    }
 
-@app.route("/summary/<client_name>/range", methods=["GET"])
-def summary_date_range(client_name):
-    db = SessionLocal()
 
+
+
+# ✅ Helper: Analyze contract compliance
+def analyze_contract_compliance(contract: str, posts: list, username: str, date_range: dict, 
+                                 platform: str, content_stats: dict, collaboration_stats: dict = None) -> dict:
+    start_date = date_range.get('start', 'N/A')
+    end_date = date_range.get('end', 'N/A')
+    
+    if not client or not contract:
+        return {
+            'compliance_status': 'unknown',
+            'compliance_score': 0,
+            'analysis': 'AI not configured or no contract found',
+            'deliverables_met': [],
+            'deliverables_missing': [],
+            'recommendations': []
+        }
+    
     try:
-        # ================= 1. DATE RANGE =================
-        start_str = request.args.get('start_date')
-        end_str = request.args.get('end_date')
-
-        if not start_str or not end_str:
-            return jsonify({"error": "Missing start_date and end_date"}), 400
-
-        try:
-            start_dt = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            end_dt = datetime.strptime(end_str, "%Y-%m-%d").replace(
-                hour=23, minute=59, second=59, tzinfo=timezone.utc
-            )
-        except ValueError:
-            return jsonify({"error": "Invalid date format YYYY-MM-DD"}), 400
-
-        # ================= 2. CLIENT =================
-        client = db.query(Client).filter(Client.name == client_name).first()
-        if not client:
-            return jsonify({"error": "Client not found"}), 404
-
-        # ================= 3. INSTAGRAM =================
-        ig_posts_query = []
-        ig_count = ig_video = ig_carousel = ig_static = 0
-
-        if client.instagram:
-            base = db.query(Post).filter(
-                Post.username == client.instagram,
-                Post.taken_at >= start_dt,
-                Post.taken_at <= end_dt
-            )
-
-            ig_count = base.count()
-            ig_video = base.filter(Post.video_versions != 'null').count()
-            ig_carousel = base.filter(Post.carousel_media != 'null').count()
-            ig_static = base.filter(
-                Post.video_versions == 'null',
-                Post.carousel_media == 'null'
-            ).count()
-
-            ig_posts_query = base.all()
-
-        # ================= 4. TIKTOK =================
-        tt_count = 0
-        tt_posts_query = []
-
-        if client.tiktok:
-            base_tt = db.query(TikTokVideo).filter(
-                TikTokVideo.author == client.tiktok,
-                TikTokVideo.create_time >= start_dt,
-                TikTokVideo.create_time <= end_dt
-            )
-
-            tt_count = base_tt.count()
-            tt_posts_query = base_tt.all()
-
-        # ================= 5. FACEBOOK =================
-        fb_count = fb_photo = fb_reel = fb_post = 0
-        fb_hour_distribution = {}
-        fb_posts_query = []
-
-        if client.facebook:
-            base_fb = db.query(FacebookPost).filter(
-                FacebookPost.user_username_raw == client.facebook,
-                FacebookPost.date_posted >= start_dt,
-                FacebookPost.date_posted <= end_dt
-            )
-
-            fb_count = base_fb.count()
-            fb_reel = base_fb.filter(FacebookPost.post_type.ilike("reel")).count()
-            fb_post = base_fb.filter(FacebookPost.post_type.ilike("post")).count()
-
-            fb_posts = base_fb.all()
-
-            # time analysis (hourly distribution)
-            for p in fb_posts:
-                fb_posts_query.append(p)
-
-                if p.date_posted:
-                    hour = p.date_posted.hour
-                    fb_hour_distribution[hour] = fb_hour_distribution.get(hour, 0) + 1
-
-        # ================= 6. FORMAT POSTS =================
-        posts = []
-
-        for p in ig_posts_query:
-            posts.append({
-                "platform": "instagram",
-                "caption": p.caption,
-                "taken_at": p.taken_at.isoformat() if p.taken_at else None
-            })
-
-        for p in tt_posts_query:
-            posts.append({
-                "platform": "tiktok",
-                "description": p.description,
-                "create_time": p.create_time.isoformat() if p.create_time else None
-            })
-
-        for p in fb_posts_query:
-            posts.append({
-                "platform": "facebook",
-                "content": p.content,
-                "post_type": p.post_type,
-                "date_posted": p.date_posted.isoformat() if p.date_posted else None
-            })
-
-        # ================= 7. AI SUMMARY =================
-        ai_summary = "AI summary generation unavailable."
-
-        try:
-            prompt = (
-                f"📊 CLIENT PERFORMANCE REPORT (Date Range: {start_str} to {end_str})\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"Client Name: {client.name}\n"
-                f"Instagram: {client.instagram or 'Not linked'}\n"
-                f"TikTok: {client.tiktok or 'Not linked'}\n"
-                f"Facebook: {client.facebook or 'Not linked'}\n"
-                f"Contract: {client.contract or 'N/A'}\n\n"
-                f"📈 INSTAGRAM METRICS:\n"
-                f"   • Total Posts: {ig_count}\n"
-                f"   • 🎥 Video Posts: {ig_video}\n"
-                f"   • 🎠 Carousel Posts: {ig_carousel}\n"
-                f"   • 📷 Static Posts: {ig_static}\n\n"
-                f"📈 TIKTOK METRICS:\n"
-                f"   • Total Videos: {tt_count}\n\n"
-                f"📈 FACEBOOK METRICS:\n"
-                f"   • Total Posts: {fb_count}\n"
-                f"   • 🎥 Reels: {fb_reel}\n"
-                f"   • 📝 Standard Posts: {fb_post}\n"
-                f"   • 🕐 Peak Posting Hour: {max(fb_hour_distribution, key=fb_hour_distribution.get) if fb_hour_distribution else 'N/A'}\n\n"
-                f"Display when was the last post on each platform.\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Generate a brief executive report for the period {start_str} to {end_str}. "
-                f"TASK: Analyze if posting frequency and content mix meets expectations based on the contract {client.contract}.\n"
-                f"The report should include:Executive Summary Provide a concise overview of the client’s social media activity, highlighting key patterns in posting frequency, platform usage, and content types."
-                f"Content Analysis Analyze the distribution of content types (video, carousel, static) across platforms and how it aligns with best practices for engagement."
-                f"Engagement Insights Identify any correlations between posting times, content types, and engagement metrics (if available)."
-                f"Strategic Recommendations  \n"
-                f"Provide 3–5 clear and actionable recommendations to improve content strategy, posting consistency, and platform performance."
-                f"Formatting Guidelines:"
-                f"    - Use readable text with emojis for section headers."
-                f"    - Use line breaks and short paragraphs for clarity."
-                f"    - Keep the tone professional and suitable for executives."
-                f"    - This report was generated by crAIg, Creative Edge’s AI-powered reporting assistant."
-            )
-
-            response = genai_client.models.generate_content(
-                model="gemini-3-flash-preview",
-                contents=prompt
-            )
-
-            ai_summary = response.text
-
-        except Exception as e:
-            print("AI Error:", e)
-            ai_summary = "AI summary unavailable."
-
-        # ================= 8. RESPONSE =================
-        return jsonify({
-            "status": "success",
-            "period": f"{start_str} to {end_str}",
-            "summary": {
-                "instagram": {
-                    "total": ig_count,
-                    "video": ig_video,
-                    "carousel": ig_carousel,
-                    "static": ig_static
-                },
-                "tiktok": {
-                    "total": tt_count
-                },
-                "facebook": {
-                    "total": fb_count,
-                    "reel": fb_reel,
-                    "post": fb_post,
-                    "hour_distribution": fb_hour_distribution
-                },
-                "ai_summary": ai_summary
-            },
-            "posts": posts
-        })
-
-    except Exception as e:
-        print("❌ Server Error:", e)
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
-
-    finally:
-        db.close()
-
-# ================= CREATE / UPDATE FACEBOOK POST =================
-@app.route("/facebook/posts", methods=["POST"])
-def create_facebook_post():
-    db = SessionLocal()
-
-    try:
-        data = request.json
-
-        post = FacebookPost(
-            post_id=data["post_id"],
-            user_username_raw=data.get("user_username_raw"),
-            content=data.get("content"),
-            post_type=data.get("post_type"),
-            date_posted=data.get("date_posted")  # ISO string allowed
+        # Build platform-specific summary
+        if platform == 'instagram':
+            posts_summary = f"""
+            Platform: INSTAGRAM
+            Client: {username}
+            Date Range: {start_date} to {end_date}
+            Total Posts: {len(posts)}
+            
+            Content Type Breakdown:
+            - Carousel Posts: {content_stats.get('carousel', 0)}
+            - Image Posts: {content_stats.get('image', 0)}
+            - Video Posts (Reels+Videos+Animations): {content_stats.get('video', 0)}
+            
+            Collaboration Stats:
+            - Collaborative Posts: {collaboration_stats.get('collaborative', 0)}
+            - Solo Posts: {collaboration_stats.get('solo', 0)}
+            - Collaboration Rate: {collaboration_stats.get('collaboration_rate', 0)}%
+            """
+        elif platform == 'tiktok':
+            posts_summary = f"""
+            Platform: TIKTOK
+            Client: {username}
+            Date Range: {start_date} to {end_date}
+            Total Videos: {len(posts)}
+            
+            Content Breakdown:
+            - Videos: {content_stats.get('videos', 0)}
+            - Images: {content_stats.get('images', 0)}
+            """
+        else:  # Facebook
+            posts_summary = f"""
+            Platform: FACEBOOK
+            Client: {username}
+            Date Range: {start_date} to {end_date}
+            Total Posts: {len(posts)}
+            
+            Content Breakdown:
+            - Static Posts: {content_stats.get('posts', 0)}
+            - Videos (Reels+Videos+Animations): {content_stats.get('videos', 0)}
+            """
+        
+        if posts:
+            posts_summary += "\n\nSample Content:\n"
+            for i, post in enumerate(posts[:3]):
+                content = post.get('description') or post.get('content', '')[:150]
+                if platform == 'instagram':
+                    ctype = post.get('content_type', 'Unknown')
+                    coauthors = post.get('coauthor_producers', '')
+                    collab_note = f" [COLLAB with {coauthors}]" if coauthors else ""
+                    posts_summary += f"\n{i+1}. [{ctype}] {content}...{collab_note}"
+                elif platform == 'tiktok':
+                    ptype = post.get('post_type', 'Unknown')
+                    posts_summary += f"\n{i+1}. [{ptype}] {content}..."
+                else:
+                    ptype = post.get('post_type', 'Unknown')
+                    posts_summary += f"\n{i+1}. [{ptype}] {content}..."
+        
+        # Platform-specific prompt
+        if platform == 'instagram':
+            content_json = f"""
+            "content_breakdown": {{
+                "carousel": {content_stats.get('carousel', 0)},
+                "image": {content_stats.get('image', 0)},
+                "video": {content_stats.get('video', 0)},
+                "status": "complete" or "incomplete"
+            }},
+            "collaborations": {{
+                "collaborative_posts": {collaboration_stats.get('collaborative', 0)},
+                "solo_posts": {collaboration_stats.get('solo', 0)},
+                "collaboration_rate": "{collaboration_stats.get('collaboration_rate', 0)}%",
+                "status": "strong" or "moderate" or "weak"
+            }},
+            """
+        elif platform == 'tiktok':
+            content_json = f"""
+            "content_breakdown": {{
+                "videos": {content_stats.get('videos', 0)},
+                "images": {content_stats.get('images', 0)},
+                "status": "complete" or "incomplete"
+            }},
+            """
+        else:  # Facebook
+            content_json = f"""
+            "content_breakdown": {{
+                "posts": {content_stats.get('posts', 0)},
+                "videos": {content_stats.get('videos', 0)},
+                "status": "complete" or "incomplete"
+            }},
+            """
+        
+        prompt = f"""
+        You are a contract compliance analyst. Focus ONLY on {platform.upper()}.
+        
+        CONTRACT REQUIREMENTS:
+        {contract}
+        
+        DELIVERED CONTENT:
+        {posts_summary}
+        
+        Note: Video includes Reels, Videos, and Animations (all combined).
+        
+        Return ONLY valid JSON:
+        {{
+            "compliance_status": "fully_compliant" or "partially_compliant" or "non_compliant",
+            "compliance_score": 0 to 100,
+            "analysis": "detailed analysis referencing date range {start_date} to {end_date}",
+            "deliverables_met": ["deliverable 1", "deliverable 2"],
+            "deliverables_missing": ["missing 1", "missing 2"],
+            "post_frequency": {{
+                "required": "contract requirement",
+                "delivered": "{len(posts)} posts from {start_date} to {end_date}",
+                "status": "met" or "not_met"
+            }},
+            "content_quality": {{
+                "assessment": "assessment",
+                "score": 0 to 100
+            }},
+            {content_json}
+            "recommendations": ["recommendation 1", "recommendation 2"]
+        }}
+        """
+        
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
         )
-
-        saved = post.save(db)
-
-        return jsonify({
-            "status": "success",
-            "data": saved.to_dict()
-        })
-
+        
+        response_text = response.text.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+        
+        return json.loads(response_text)
+        
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-    finally:
-        db.close()
-
-
-# ================= GET ALL POSTS =================
-@app.route("/facebook/posts", methods=["GET"])
-def get_facebook_posts():
-    db = SessionLocal()
-
-    try:
-        limit = request.args.get("limit", 100, type=int)
-
-        posts = FacebookPost.get_all(db, limit=limit)
-
-        return jsonify({
-            "status": "success",
-            "count": len(posts),
-            "data": [p.to_dict() for p in posts]
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        db.close()
-
-
-# ================= GET BY USERNAME =================
-@app.route("/facebook/posts/user/<username>", methods=["GET"])
-def get_facebook_posts_by_user(username):
-    db = SessionLocal()
-
-    try:
-        posts = FacebookPost.get_by_username(db, username)
-
-        return jsonify({
-            "status": "success",
-            "user": username,
-            "count": len(posts),
-            "data": [p.to_dict() for p in posts]
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        db.close()
-
-
-# ================= GET BY POST ID =================
-@app.route("/facebook/posts/<post_id>", methods=["GET"])
-def get_facebook_post(post_id):
-    db = SessionLocal()
-
-    try:
-        post = FacebookPost.get_by_post_id(db, post_id)
-
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
-
-        return jsonify({
-            "status": "success",
-            "data": post.to_dict()
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        db.close()
-
-
-# ================= DELETE POST =================
-@app.route("/facebook/posts/<post_id>", methods=["DELETE"])
-def delete_facebook_post(post_id):
-    db = SessionLocal()
-
-    try:
-        post = FacebookPost.get_by_post_id(db, post_id)
-
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
-
-        post.delete(db)
-
-        return jsonify({
-            "status": "deleted",
-            "post_id": post_id
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        db.close()
-
-# ================= STATS =================
-
-@app.route("/stats", methods=["GET"])
-def stats():
-    db = get_db()
-
-    try:
-        data = {
-            "posts": Post.count(db),
-            "clients": Client.count(db)
+        return {
+            'compliance_status': 'error',
+            'compliance_score': 0,
+            'analysis': f'Error: {str(e)}',
+            'deliverables_met': [],
+            'deliverables_missing': [],
+            'recommendations': []
         }
 
-        return jsonify(data)
 
+# ═══════════════════════════════════════════════════════
+# ✅ FACEBOOK ENDPOINT
+# ═══════════════════════════════════════════════════════
+
+@app.route('/api/facebook/<username>/contract-compliance', methods=['GET'])
+def check_facebook_contract_compliance(username):
+    db: Session = SessionLocal()
+    
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        client_record = db.execute(
+            select(Client).where(Client.facebook == username)
+        ).scalars().first()
+        
+        if not client_record:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        if not client_record.contract:
+            return jsonify({'error': 'No contract found'}), 404
+        
+        stmt = select(FacebookPost).where(FacebookPost.user_username_raw == username)
+        
+        if start_date:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            stmt = stmt.where(FacebookPost.date_posted >= start)
+        
+        if end_date:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            stmt = stmt.where(FacebookPost.date_posted <= end)
+        
+        stmt = stmt.order_by(FacebookPost.date_posted.desc())
+        posts = db.execute(stmt).scalars().all()
+        
+        posts_data = [post.to_dict() for post in posts]
+        date_range = {'start': start_date, 'end': end_date}
+        content_stats = count_facebook_content(posts_data)
+        
+        compliance_analysis = analyze_contract_compliance(
+            contract=client_record.contract,
+            posts=posts_data,
+            username=username,
+            date_range=date_range,
+            platform='facebook',
+            content_stats=content_stats
+        )
+        
+        return jsonify({
+            'platform': 'facebook',
+            'username': username,
+            'client_name': client_record.name,
+            'date_range': date_range,
+            'total_posts_delivered': len(posts),
+            'content_breakdown': {
+                'posts': content_stats['posts'],
+                'videos': content_stats['videos'],
+                'total': content_stats['total'],
+                'note': 'Videos include: Reels, Videos, and Animations'
+            },
+            'contract_preview': client_record.contract[:200] + '...' if len(client_record.contract) > 200 else client_record.contract,
+            'compliance_analysis': compliance_analysis
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
     finally:
         db.close()
 
 
-# ================= RUN SERVER =================
+# ═══════════════════════════════════════════════════════
+# ✅ INSTAGRAM ENDPOINT
+# ═══════════════════════════════════════════════════════
+
+@app.route('/api/instagram/<username>/contract-compliance', methods=['GET'])
+def check_instagram_contract_compliance(username):
+    """
+    Analyze Instagram contract compliance
+    Example: GET /api/instagram/basco_paints/contract-compliance?start=2026-03-01&end=2026-03-31
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        # Get client by Instagram handle
+        client_record = db.execute(
+            select(Client).where(Client.instagram == username)
+        ).scalars().first()
+        
+        if not client_record:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        if not client_record.contract:
+            return jsonify({'error': 'No contract found'}), 404
+        
+        # Get Instagram posts where client is EITHER user_posted OR coauthor_producers
+        stmt = select(InstagramPost).where(
+            (InstagramPost.user_posted == username) |
+            (InstagramPost.coauthor_producers.like(f'%{username}%'))
+        )
+        
+        if start_date:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            stmt = stmt.where(InstagramPost.date_posted >= start)
+        
+        if end_date:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            stmt = stmt.where(InstagramPost.date_posted <= end)
+        
+        stmt = stmt.order_by(InstagramPost.date_posted.desc())
+        posts = db.execute(stmt).scalars().all()
+        
+        # Convert to dict and mark if it's a collaboration
+        posts_data = []
+        for post in posts:
+            post_dict = {
+                'id': post.id,
+                'content_id': post.content_id,
+                'description': post.description,
+                'date_posted': post.date_posted.isoformat() if post.date_posted else None,
+                'content_type': post.content_type,
+                'user_posted': post.user_posted,
+                'coauthor_producers': post.coauthor_producers,
+                # Mark if this is a collaboration post
+                'is_collaboration': (
+                    post.user_posted != username and 
+                    post.coauthor_producers and 
+                    username in post.coauthor_producers
+                )
+            }
+            posts_data.append(post_dict)
+        
+        date_range = {'start': start_date, 'end': end_date}
+        
+        # Count Instagram content types
+        content_stats = count_instagram_content_types(posts_data)
+        
+        # Count collaborations - posts where client is co-author
+        collaboration_stats = count_collaborative_posts(posts_data, username)
+        
+        compliance_analysis = analyze_contract_compliance(
+            contract=client_record.contract,
+            posts=posts_data,
+            username=username,
+            date_range=date_range,
+            platform='instagram',
+            content_stats=content_stats,
+            collaboration_stats=collaboration_stats
+        )
+        
+        return jsonify({
+            'platform': 'instagram',
+            'username': username,
+            'client_name': client_record.name,
+            'date_range': date_range,
+            'total_posts_delivered': len(posts),
+            'content_types': {
+                'carousel': content_stats['carousel'],
+                'image': content_stats['image'],
+                'video': content_stats['video'],
+                'total': content_stats['total'],
+                'note': 'Video includes: Reels, Videos, and Animations'
+            },
+            'collaboration_stats': {
+                'collaborative_posts': collaboration_stats['collaborative'],
+                'solo_posts': collaboration_stats['solo'],
+                'total': collaboration_stats['total'],
+                'collaboration_rate': f"{collaboration_stats['collaboration_rate']}%",
+                'note': 'Includes posts where client is co-author'
+            },
+            'contract_preview': client_record.contract[:200] + '...' if len(client_record.contract) > 200 else client_record.contract,
+            'compliance_analysis': compliance_analysis
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+
+
+# ═══════════════════════════════════════════════════════
+# ✅ TIKTOK ENDPOINT
+# ═══════════════════════════════════════════════════════
+
+@app.route('/api/tiktok/<username>/contract-compliance', methods=['GET'])
+def check_tiktok_contract_compliance(username):
+    db: Session = SessionLocal()
+    
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        client_record = db.execute(
+            select(Client).where(Client.tiktok == username)
+        ).scalars().first()
+        
+        if not client_record:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        if not client_record.contract:
+            return jsonify({'error': 'No contract found'}), 404
+        
+        stmt = select(TikTokVideo).where(TikTokVideo.author == username)
+        
+        if start_date:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            stmt = stmt.where(TikTokVideo.create_time >= start)
+        
+        if end_date:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            stmt = stmt.where(TikTokVideo.create_time <= end)
+        
+        stmt = stmt.order_by(TikTokVideo.create_time.desc())
+        videos = db.execute(stmt).scalars().all()
+        
+        videos_data = [video.to_dict() for video in videos]
+        date_range = {'start': start_date, 'end': end_date}
+        content_stats = count_tiktok_content(videos_data)
+        
+        compliance_analysis = analyze_contract_compliance(
+            contract=client_record.contract,
+            posts=videos_data,
+            username=username,
+            date_range=date_range,
+            platform='tiktok',
+            content_stats=content_stats
+        )
+        
+        return jsonify({
+            'platform': 'tiktok',
+            'username': username,
+            'client_name': client_record.name,
+            'date_range': date_range,
+            'total_videos_delivered': len(videos),
+            'content_breakdown': {
+                'videos': content_stats['videos'],
+                'images': content_stats['images'],
+                'total': content_stats['total'],
+                'note': 'TikTok is primarily video content'
+            },
+            'contract_preview': client_record.contract[:200] + '...' if len(client_record.contract) > 200 else client_record.contract,
+            'compliance_analysis': compliance_analysis
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+
+# ═══════════════════════════════════════════════════════
+# ✅ CLIENT CRUD ENDPOINTS
+# ═══════════════════════════════════════════════════════
+
+@app.route('/api/clients', methods=['GET'])
+def get_all_clients():
+    """Get all clients for dropdown selection"""
+    db: Session = SessionLocal()
+    
+    try:
+        clients = db.execute(select(Client)).scalars().all()
+        
+        clients_data = [{
+            'id': client.id,
+            'name': client.name,
+            'facebook': client.facebook,
+            'instagram': client.instagram,
+            'tiktok': client.tiktok,
+            'contract': client.contract[:100] + '...' if client.contract and len(client.contract) > 100 else client.contract
+        } for client in clients]
+        
+        return jsonify({
+            'total': len(clients_data),
+            'clients': clients_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/clients/<int:client_id>', methods=['GET'])
+def get_client(client_id):
+    """Get a single client by ID"""
+    db: Session = SessionLocal()
+    
+    try:
+        client = db.execute(
+            select(Client).where(Client.id == client_id)
+        ).scalars().first()
+        
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        return jsonify({
+            'id': client.id,
+            'name': client.name,
+            'facebook': client.facebook,
+            'instagram': client.instagram,
+            'tiktok': client.tiktok,
+            'contract': client.contract
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/clients', methods=['POST'])
+def create_client():
+    """
+    Create a new client
+    
+    Request Body:
+    {
+        "name": "Client Name",
+        "facebook": "facebook_handle",
+        "instagram": "instagram_handle",
+        "tiktok": "tiktok_handle",
+        "contract": "Contract text..."
+    }
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        if not data.get('name'):
+            return jsonify({'error': 'Client name is required'}), 400
+        
+        # Check if client with same name already exists
+        existing = db.execute(
+            select(Client).where(Client.name == data.get('name'))
+        ).scalars().first()
+        
+        if existing:
+            return jsonify({'error': 'Client with this name already exists'}), 409
+        
+        # Create new client
+        new_client = Client(
+            name=data.get('name', '').strip(),
+            facebook=data.get('facebook', '').strip() if data.get('facebook') else None,
+            instagram=data.get('instagram', '').strip() if data.get('instagram') else None,
+            tiktok=data.get('tiktok', '').strip() if data.get('tiktok') else None,
+            contract=data.get('contract', '')
+        )
+        
+        db.add(new_client)
+        db.commit()
+        db.refresh(new_client)
+        
+        return jsonify({
+            'message': 'Client created successfully',
+            'client': {
+                'id': new_client.id,
+                'name': new_client.name,
+                'facebook': new_client.facebook,
+                'instagram': new_client.instagram,
+                'tiktok': new_client.tiktok
+            }
+        }), 201
+        
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/clients/<int:client_id>', methods=['PUT'])
+def update_client(client_id):
+    """
+    Update an existing client
+    
+    Request Body (all fields optional):
+    {
+        "name": "Updated Client Name",
+        "facebook": "updated_facebook_handle",
+        "instagram": "updated_instagram_handle",
+        "tiktok": "updated_tiktok_handle",
+        "contract": "Updated contract text..."
+    }
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        client = db.execute(
+            select(Client).where(Client.id == client_id)
+        ).scalars().first()
+        
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Check if new name conflicts with existing client
+        if data.get('name') and data.get('name') != client.name:
+            existing = db.execute(
+                select(Client).where(
+                    Client.name == data.get('name'),
+                    Client.id != client_id
+                )
+            ).scalars().first()
+            
+            if existing:
+                return jsonify({'error': 'Another client with this name already exists'}), 409
+        
+        # Update fields (only if provided)
+        if data.get('name'):
+            client.name = data.get('name').strip()
+        
+        if data.get('facebook') is not None:
+            client.facebook = data.get('facebook').strip() if data.get('facebook') else None
+        
+        if data.get('instagram') is not None:
+            client.instagram = data.get('instagram').strip() if data.get('instagram') else None
+        
+        if data.get('tiktok') is not None:
+            client.tiktok = data.get('tiktok').strip() if data.get('tiktok') else None
+        
+        if data.get('contract') is not None:
+            client.contract = data.get('contract')
+        
+        db.commit()
+        db.refresh(client)
+        
+        return jsonify({
+            'message': 'Client updated successfully',
+            'client': {
+                'id': client.id,
+                'name': client.name,
+                'facebook': client.facebook,
+                'instagram': client.instagram,
+                'tiktok': client.tiktok
+            }
+        }), 200
+        
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/clients/<int:client_id>', methods=['DELETE'])
+def delete_client(client_id):
+    """Delete a client"""
+    db: Session = SessionLocal()
+    
+    try:
+        client = db.execute(
+            select(Client).where(Client.id == client_id)
+        ).scalars().first()
+        
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        db.delete(client)
+        db.commit()
+        
+        return jsonify({
+            'message': 'Client deleted successfully',
+            'deleted_client_id': client_id
+        }), 200
+        
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+
+@app.route('/api/clients/search', methods=['GET'])
+def search_clients():
+    """
+    Search clients by name or social handle
+    
+    Query Params:
+    - q: search query
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        query = request.args.get('q', '').strip()
+        
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+        
+        # Search across name and social handles
+        clients = db.execute(
+            select(Client).where(
+                (Client.name.ilike(f'%{query}%')) |
+                (Client.facebook.ilike(f'%{query}%')) |
+                (Client.instagram.ilike(f'%{query}%')) |
+                (Client.tiktok.ilike(f'%{query}%'))
+            )
+        ).scalars().all()
+        
+        clients_data = [{
+            'id': client.id,
+            'name': client.name,
+            'facebook': client.facebook,
+            'instagram': client.instagram,
+            'tiktok': client.tiktok
+        } for client in clients]
+        
+        return jsonify({
+            'query': query,
+            'total': len(clients_data),
+            'clients': clients_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    finally:
+        db.close()
+
+# ═══════════════════════════════════════════════════════
+# ✅ HEALTH CHECK
+# ═══════════════════════════════════════════════════════
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    try:
+        db = SessionLocal()
+        db.execute(select(FacebookPost).limit(1))
+        db.execute(select(InstagramPost).limit(1))
+        db.execute(select(TikTokVideo).limit(1))
+        db.execute(select(Client).limit(1))
+        db.close()
+        
+        return jsonify({
+            'status': 'ok',
+            'database': 'connected',
+            'platforms': ['facebook', 'instagram', 'tiktok'],
+            'ai_configured': client is not None
+        }), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 if __name__ == "__main__":
-  
     app.run(debug=True, host="0.0.0.0", port=5001)

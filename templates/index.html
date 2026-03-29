@@ -1,342 +1,1157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Social Media Performance Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Contract Compliance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+        :root {
+            --bg-primary: #1a1f24;
+            --bg-secondary: #2a2f34;
+            --bg-card: #1a1f24;
+            --accent-primary: #00d4aa;
+            --accent-facebook: #1877f2;
+            --accent-instagram: #e6683c;
+            --accent-tiktok: #00f2ea;
+            --text-primary: #ffffff;
+            --text-secondary: #8b9299;
+            --border-color: #2a2f34;
+            --success: #00d4aa;
+            --warning: #ff9500;
+            --danger: #ff4444;
+        }
 
-<style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
 
-body{
-  font-family: Arial, sans-serif;
-  background:#f4f4f9;
-  margin:0;
-}
+        /* ═══════════════════════════════════════════════════════
+           HEADER - UPDATED LAYOUT
+           ═══════════════════════════════════════════════════════ */
+        .header {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--bg-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-header{
-  background:#4CAF50;
-  color:white;
-  padding:1rem;
-  text-align:center;
-}
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.container{
-  max-width:1100px;
-  margin:2rem auto;
-  background:white;
-  padding:2rem;
-  border-radius:8px;
-  box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-select,input,button{
-  padding:0.6rem;
-  margin-top:0.5rem;
-  width:100%;
-  font-size:1rem;
-}
+        .header-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
 
-button{
-  background:#4CAF50;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
+        /* Large Client Select */
+        .client-select-wrapper {
+            width: 100%;
+        }
 
-button:hover{ background:#45a049; }
-button:disabled{ background:#aaa; }
+        .client-select {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238b9299' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 44px;
+            transition: all 0.2s ease;
+        }
 
-.loading{
-  margin-top:1rem;
-  font-style:italic;
-  color:#666;
-}
+        .client-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
 
-.error{
-  margin-top:1rem;
-  color:#d32f2f;
-  background:#ffebee;
-  padding:1rem;
-  border-radius:5px;
-  display:none;
-}
+        .client-select:active {
+            transform: scale(0.99);
+        }
 
-.summary{ margin-top:2rem; }
+        /* Date Pickers Side by Side */
+        .date-pickers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
 
-.metrics{
-  display:grid;
-  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
-  gap:12px;
-  margin-bottom:25px;
-}
+        .date-input-wrapper {
+            position: relative;
+        }
 
-.card{
-  background:#f8f8f8;
-  padding:14px;
-  border-radius:8px;
-  text-align:center;
-  box-shadow:0 2px 5px rgba(0,0,0,0.08);
-  transition:transform 0.2s;
-}
+        .date-input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
-.card:hover{
-  transform:translateY(-3px);
-}
+        .date-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
 
-.card h3{
-  margin:0;
-  font-size:22px;
-  color:#2e7d32;
-}
+        .date-label {
+            position: absolute;
+            top: -8px;
+            left: 8px;
+            background: var(--bg-secondary);
+            padding: 0 4px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+        }
 
-.card p{
-  margin:6px 0 0 0;
-  color:#555;
-  font-size:13px;
-}
+        /* Refresh Button */
+        .btn {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
 
-/* PLATFORM HEADERS */
-.platform-title{
-  margin-top:25px;
-  font-size:18px;
-  font-weight:bold;
-  color:#333;
-  border-left:5px solid #4CAF50;
-  padding-left:10px;
-}
+        .btn:active {
+            transform: scale(0.98);
+        }
 
-/* AI BOX */
-.ai-box{
-  background:#f1f9f3;
-  border-left:5px solid #4CAF50;
-  padding:1rem;
-  border-radius:5px;
-}
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-/* DATE */
-.date-group{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-  margin-bottom:1rem;
-}
+        /* ═══════════════════════════════════════════════════════
+           MAIN METRICS
+           ═══════════════════════════════════════════════════════ */
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 20px 16px;
+        }
 
-@media(max-width:600px){
-  .date-group{ grid-template-columns:1fr; }
-}
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 8px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
 
-</style>
+        .circular-progress {
+            width: 70px;
+            height: 70px;
+            position: relative;
+        }
+
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: var(--bg-primary);
+            stroke-width: 8;
+        }
+
+        .progress-ring {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s ease;
+        }
+
+        .progress-ring.facebook { stroke: var(--accent-facebook); }
+        .progress-ring.instagram { stroke: var(--accent-instagram); }
+        .progress-ring.tiktok { stroke: var(--accent-tiktok); }
+
+        .metric-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            text-align: center;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           STATUS CARDS
+           ═══════════════════════════════════════════════════════ */
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 0 16px 20px;
+        }
+
+        .status-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-card-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .status-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .status-value.compliant { color: var(--success); }
+        .status-value.partial { color: var(--warning); }
+        .status-value.non-compliant { color: var(--danger); }
+
+        .status-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           SECTION
+           ═══════════════════════════════════════════════════════ */
+        .section {
+            padding: 0 16px 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .collapse-btn {
+            background: var(--bg-secondary);
+            border: none;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           PLATFORM CARDS
+           ═══════════════════════════════════════════════════════ */
+        .platforms-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .platform-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid;
+        }
+
+        .platform-card.facebook { border-left-color: var(--accent-facebook); }
+        .platform-card.instagram { border-left-color: var(--accent-instagram); }
+        .platform-card.tiktok { border-left-color: var(--accent-tiktok); }
+
+        .platform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .platform-name {
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .platform-score {
+            background: var(--bg-primary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .platform-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .stat-box {
+            background: var(--bg-primary);
+            padding: 10px 6px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box-value {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .stat-box-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           ANALYSIS SECTION
+           ═══════════════════════════════════════════════════════ */
+        .analysis-section {
+            padding: 0 16px 20px;
+        }
+
+        .analysis-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .analysis-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .analysis-text {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .analysis-list {
+            list-style: none;
+            margin-bottom: 12px;
+        }
+
+        .analysis-list-title {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .analysis-list li {
+            padding: 8px 10px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .analysis-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .check-icon { color: var(--success); font-weight: 700; flex-shrink: 0; }
+        .cross-icon { color: var(--danger); font-weight: 700; flex-shrink: 0; }
+        .tip-icon { color: var(--accent-primary); flex-shrink: 0; }
+
+        /* ═══════════════════════════════════════════════════════
+           LOADING & NO DATA
+           ═══════════════════════════════════════════════════════ */
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--bg-secondary);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .no-data-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .no-data h2 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        .no-data p {
+            font-size: 12px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           BOTTOM NAVIGATION
+           ═══════════════════════════════════════════════════════ */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            padding: 8px 12px;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .nav-item.active {
+            color: var(--accent-primary);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TABLET BREAKPOINT
+           ═══════════════════════════════════════════════════════ */
+        @media (min-width: 768px) {
+            .header {
+                padding: 20px 24px;
+            }
+
+            .header-controls {
+                flex-direction: row;
+                align-items: stretch;
+            }
+
+            .client-select-wrapper {
+                flex: 2;
+                min-width: 250px;
+            }
+
+            .date-pickers {
+                flex: 1;
+                min-width: 200px;
+            }
+
+            .btn {
+                width: auto;
+                align-self: stretch;
+            }
+
+            .metrics-container {
+                gap: 20px;
+                padding: 30px 24px;
+            }
+
+            .metric-card {
+                padding: 16px;
+            }
+
+            .circular-progress {
+                width: 90px;
+                height: 90px;
+            }
+
+            .metric-value {
+                font-size: 24px;
+            }
+
+            .metric-label {
+                font-size: 12px;
+            }
+
+            .status-cards {
+                gap: 16px;
+                padding: 0 24px 25px;
+            }
+
+            .status-card {
+                padding: 20px;
+            }
+
+            .section {
+                padding: 0 24px 25px;
+            }
+
+            .section-title {
+                font-size: 22px;
+            }
+
+            .platform-card {
+                padding: 20px;
+            }
+
+            .platform-stats {
+                gap: 12px;
+            }
+
+            .stat-box {
+                padding: 12px 8px;
+            }
+
+            .stat-box-value {
+                font-size: 18px;
+            }
+
+            .stat-box-label {
+                font-size: 10px;
+            }
+
+            .analysis-card {
+                padding: 20px;
+            }
+
+            .analysis-text {
+                font-size: 13px;
+                padding: 15px;
+            }
+
+            .analysis-list li {
+                font-size: 13px;
+                padding: 10px 12px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           DESKTOP BREAKPOINT
+           ═══════════════════════════════════════════════════════ */
+        @media (min-width: 1024px) {
+            .metrics-container {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .status-cards {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .section {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .platforms-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .analysis-section {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .analysis-card {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            .analysis-header {
+                grid-column: 1 / -1;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           UTILITIES
+           ═══════════════════════════════════════════════════════ */
+        .hidden { display: none !important; }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Safe area for notched phones */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            body {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+            
+            .bottom-nav {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            }
+        }
+    </style>
 </head>
-
 <body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="logo">COMPLIANCE</div>
+        </div>
+        <div class="header-controls">
+            <!-- Large Client Select -->
+            <div class="client-select-wrapper">
+                <select id="clientSelect" class="client-select">
+                    <option value="">Loading clients...</option>
+                </select>
+            </div>
+            
+            <!-- Date Pickers Side by Side -->
+            <div class="date-pickers">
+                <div class="date-input-wrapper">
+                    <label class="date-label">Start</label>
+                    <input type="date" id="startDate" class="date-input" value="2026-03-01">
+                </div>
+                <div class="date-input-wrapper">
+                    <label class="date-label">End</label>
+                    <input type="date" id="endDate" class="date-input" value="2026-03-31">
+                </div>
+            </div>
+            
+            <!-- Refresh Button -->
+            <button class="btn" id="refreshBtn" onclick="loadData()">Refresh</button>
+        </div>
+    </header>
 
-<header>
-<h1>Social Media Performance Dashboard</h1>
-</header>
+    <!-- Main Metrics -->
+    <div class="metrics-container">
+        <div class="metric-card">
+            <div class="circular-progress">
+                <svg width="70" height="70">
+                    <circle class="progress-ring-bg" cx="35" cy="35" r="28"></circle>
+                    <circle class="progress-ring facebook" id="fb-ring" cx="35" cy="35" r="28" 
+                            stroke-dasharray="175.93" stroke-dashoffset="175.93"></circle>
+                </svg>
+                <div class="metric-value" id="fb-score">--</div>
+            </div>
+            <div class="metric-label">Facebook</div>
+        </div>
 
-<div class="container">
+        <div class="metric-card">
+            <div class="circular-progress">
+                <svg width="70" height="70">
+                    <circle class="progress-ring-bg" cx="35" cy="35" r="28"></circle>
+                    <circle class="progress-ring instagram" id="ig-ring" cx="35" cy="35" r="28" 
+                            stroke-dasharray="175.93" stroke-dashoffset="175.93"></circle>
+                </svg>
+                <div class="metric-value" id="ig-score">--</div>
+            </div>
+            <div class="metric-label">Instagram</div>
+        </div>
 
-<h2>Select Client</h2>
-<select id="clientSelect">
-  <option value="">Loading clients...</option>
-</select>
+        <div class="metric-card">
+            <div class="circular-progress">
+                <svg width="70" height="70">
+                    <circle class="progress-ring-bg" cx="35" cy="35" r="28"></circle>
+                    <circle class="progress-ring tiktok" id="tt-ring" cx="35" cy="35" r="28" 
+                            stroke-dasharray="175.93" stroke-dashoffset="175.93"></circle>
+                </svg>
+                <div class="metric-value" id="tt-score">--</div>
+            </div>
+            <div class="metric-label">TikTok</div>
+        </div>
+    </div>
 
-<h3>Date Range</h3>
-<div class="date-group">
-  <div>
-    <label>Start Date</label>
-    <input type="date" id="startDate">
-  </div>
-  <div>
-    <label>End Date</label>
-    <input type="date" id="endDate">
-  </div>
-</div>
+    <!-- Status Cards -->
+    <div class="status-cards">
+        <div class="status-card">
+            <div class="status-card-title">Overall Status</div>
+            <div class="status-value compliant" id="overall-status">--</div>
+            <div class="status-sub" id="total-posts">-- posts</div>
+        </div>
+        <div class="status-card">
+            <div class="status-card-title">Avg Compliance</div>
+            <div class="status-value partial" id="avg-compliance">--%</div>
+            <div class="status-sub">All platforms</div>
+        </div>
+    </div>
 
-<button id="summaryBtn">Get Performance Summary</button>
+    <!-- Loading State -->
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+    </div>
 
-<div id="loading" class="loading" style="display:none;">⏳ Loading data...</div>
-<div id="error" class="error"></div>
+    <!-- No Data State -->
+    <div id="noData" class="no-data hidden">
+        <div class="no-data-icon">📊</div>
+        <h2>No Data Available</h2>
+        <p>Select a client and date range</p>
+    </div>
 
-<div id="summary" class="summary" style="display:none;">
+    <!-- Platform Details -->
+    <div class="section hidden" id="platformsSection">
+        <div class="section-header">
+            <h2 class="section-title">📱 Platform Details</h2>
+            <button class="collapse-btn" onclick="toggleSection('platformsSection')">−</button>
+        </div>
+        <div class="platforms-container">
+            <!-- Facebook -->
+            <div class="platform-card facebook">
+                <div class="platform-header">
+                    <div class="platform-name">📘 Facebook</div>
+                    <div class="platform-score" id="fb-detailed-score">--</div>
+                </div>
+                <div class="platform-stats">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="fb-posts">--</div>
+                        <div class="stat-box-label">Posts</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="fb-videos">--</div>
+                        <div class="stat-box-label">Videos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="fb-total">--</div>
+                        <div class="stat-box-label">Total</div>
+                    </div>
+                </div>
+            </div>
 
-<h2>📊 Performance Metrics</h2>
+            <!-- Instagram -->
+            <div class="platform-card instagram">
+                <div class="platform-header">
+                    <div class="platform-name">📷 Instagram</div>
+                    <div class="platform-score" id="ig-detailed-score">--</div>
+                </div>
+                <div class="platform-stats">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-carousel">--</div>
+                        <div class="stat-box-label">Carousel</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-images">--</div>
+                        <div class="stat-box-label">Images</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-videos">--</div>
+                        <div class="stat-box-label">Videos</div>
+                    </div>
+                </div>
+                <div class="platform-stats" style="margin-top: 8px;">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-collab">--</div>
+                        <div class="stat-box-label">Collabs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-rate">--%</div>
+                        <div class="stat-box-label">Rate</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="ig-total">--</div>
+                        <div class="stat-box-label">Total</div>
+                    </div>
+                </div>
+            </div>
 
-<div class="metrics">
+            <!-- TikTok -->
+            <div class="platform-card tiktok">
+                <div class="platform-header">
+                    <div class="platform-name">🎵 TikTok</div>
+                    <div class="platform-score" id="tt-detailed-score">--</div>
+                </div>
+                <div class="platform-stats">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="tt-videos">--</div>
+                        <div class="stat-box-label">Videos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="tt-images">--</div>
+                        <div class="stat-box-label">Images</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="tt-total">--</div>
+                        <div class="stat-box-label">Total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- INSTAGRAM -->
-<div class="card">
-  <h3 id="igTotal">0</h3>
-  <p>📸 Instagram Total</p>
-</div>
+    <!-- AI Analysis Section -->
+    <div class="section analysis-section hidden" id="analysisSection">
+        <div class="section-header">
+            <h2 class="section-title">🤖 AI Analysis</h2>
+            <button class="collapse-btn" onclick="toggleSection('analysisSection')">−</button>
+        </div>
+        
+        <!-- Facebook Analysis -->
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">📘 Facebook</div>
+            </div>
+            <div class="analysis-text" id="fb-analysis">Loading...</div>
+            <div class="analysis-list-title">✅ Met</div>
+            <ul class="analysis-list" id="fb-met"></ul>
+            <div class="analysis-list-title">💡 Recommendations</div>
+            <ul class="analysis-list" id="fb-recommendations"></ul>
+        </div>
 
-<div class="card">
-  <h3 id="igVideo">0</h3>
-  <p>🎥 Videos</p>
-</div>
+        <!-- Instagram Analysis -->
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">📷 Instagram</div>
+            </div>
+            <div class="analysis-text" id="ig-analysis">Loading...</div>
+            <div class="analysis-list-title">✅ Met</div>
+            <ul class="analysis-list" id="ig-met"></ul>
+            <div class="analysis-list-title">💡 Recommendations</div>
+            <ul class="analysis-list" id="ig-recommendations"></ul>
+        </div>
 
-<div class="card">
-  <h3 id="igCarousel">0</h3>
-  <p>🎠 Carousels</p>
-</div>
+        <!-- TikTok Analysis -->
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">🎵 TikTok</div>
+            </div>
+            <div class="analysis-text" id="tt-analysis">Loading...</div>
+            <div class="analysis-list-title">✅ Met</div>
+            <ul class="analysis-list" id="tt-met"></ul>
+            <div class="analysis-list-title">💡 Recommendations</div>
+            <ul class="analysis-list" id="tt-recommendations"></ul>
+        </div>
+    </div>
 
-<div class="card">
-  <h3 id="igStatic">0</h3>
-  <p>📷 Static</p>
-</div>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">Dashboard</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">Schedule</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">👥</div>
+            <div class="nav-label">Clients</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">☰</div>
+            <div class="nav-label">More</div>
+        </div>
+    </nav>
 
+    <script>
+        const API_BASE = '/api';
+        let selectedClient = { name: '', facebook: '', instagram: '', tiktok: '' };
 
+        // Load clients
+        async function loadClients() {
+            const clientSelect = document.getElementById('clientSelect');
+            try {
+                const response = await fetch(`${API_BASE}/clients`);
+                const data = await response.json();
+                
+                if (data.clients && data.clients.length > 0) {
+                    clientSelect.innerHTML = '<option value="">Select a client...</option>';
+                    data.clients.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            name: client.name,
+                            facebook: client.facebook,
+                            instagram: client.instagram,
+                            tiktok: client.tiktok
+                        });
+                        option.textContent = client.name;
+                        clientSelect.appendChild(option);
+                    });
+                    clientSelect.selectedIndex = 1;
+                    updateSelectedClient();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
 
-</div>
+        function updateSelectedClient() {
+            const clientSelect = document.getElementById('clientSelect');
+            if (clientSelect.value) {
+                selectedClient = JSON.parse(clientSelect.value);
+            }
+        }
 
-<!-- FACEBOOK SECTION -->
-<div class="platform-title">📘 Facebook Performance</div>
+        document.getElementById('clientSelect').addEventListener('change', () => {
+            updateSelectedClient();
+            loadData();
+        });
 
-<div class="metrics">
+        // Toggle section visibility
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const btn = section.querySelector('.collapse-btn');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                btn.textContent = '−';
+            } else {
+                section.classList.add('hidden');
+                btn.textContent = '+';
+            }
+        }
 
-<div class="card">
-  <h3 id="fbTotal">0</h3>
-  <p>📘 Total Posts</p>
-</div>
+        // Load data
+        async function loadData() {
+            if (!selectedClient.name) {
+                alert('Please select a client');
+                return;
+            }
 
+            const refreshBtn = document.getElementById('refreshBtn');
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
 
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = 'Loading...';
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('platformsSection').classList.add('hidden');
+            document.getElementById('analysisSection').classList.add('hidden');
 
-<div class="card">
-  <h3 id="fbReel">0</h3>
-  <p>🎬 Videos</p>
-</div>
+            try {
+                const [fbData, igData, ttData] = await Promise.all([
+                    fetch(`${API_BASE}/facebook/${selectedClient.facebook}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
+                    fetch(`${API_BASE}/instagram/${selectedClient.instagram}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
+                    fetch(`${API_BASE}/tiktok/${selectedClient.tiktok}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json())
+                ]);
 
-<div class="card">
-  <h3 id="fbPost">0</h3>
-  <p>📝 Posts</p>
-</div>
+                updateDashboard(fbData, igData, ttData);
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('platformsSection').classList.remove('hidden');
+                document.getElementById('analysisSection').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('noData').classList.remove('hidden');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = 'Refresh';
+            }
+        }
 
-</div>
+        function updateDashboard(fbData, igData, ttData) {
+            updateCircularProgress('fb', fbData.compliance_analysis?.compliance_score || 0);
+            updateCircularProgress('ig', igData.compliance_analysis?.compliance_score || 0);
+            updateCircularProgress('tt', ttData.compliance_analysis?.compliance_score || 0);
 
-<!-- TIKTOK -->
-<div class="platform-title">🎵 TikTok Performance</div>
+            const totalPosts = (fbData.total_posts_delivered || 0) + 
+                             (igData.total_posts_delivered || 0) + 
+                             (ttData.total_videos_delivered || 0);
+            
+            const avgScore = Math.round(((fbData.compliance_analysis?.compliance_score || 0) + 
+                                       (igData.compliance_analysis?.compliance_score || 0) + 
+                                       (ttData.compliance_analysis?.compliance_score || 0)) / 3);
 
-<div class="metrics">
+            document.getElementById('overall-status').textContent = avgScore >= 80 ? 'Compliant' : avgScore >= 50 ? 'Partial' : 'Non-Compliant';
+            document.getElementById('overall-status').className = `status-value ${avgScore >= 80 ? 'compliant' : avgScore >= 50 ? 'partial' : 'non-compliant'}`;
+            document.getElementById('total-posts').textContent = `${totalPosts} posts`;
+            document.getElementById('avg-compliance').textContent = `${avgScore}%`;
 
-<div class="card">
-  <h3 id="ttTotal">0</h3>
-  <p>TikTok Videos</p>
-</div>
+            updatePlatformDetails('fb', fbData);
+            updatePlatformDetails('ig', igData);
+            updatePlatformDetails('tt', ttData);
 
-</div>
+            updateAnalysis('fb', fbData.compliance_analysis);
+            updateAnalysis('ig', igData.compliance_analysis);
+            updateAnalysis('tt', ttData.compliance_analysis);
+        }
 
-<h2>🤖 AI Performance Summary</h2>
+        function updateCircularProgress(platform, score) {
+            const ring = document.getElementById(`${platform}-ring`);
+            const valueEl = document.getElementById(`${platform}-score`);
+            const circumference = 175.93;
+            const offset = circumference - (score / 100) * circumference;
+            
+            ring.style.strokeDashoffset = offset;
+            valueEl.textContent = `${score}`;
+        }
 
-<div class="ai-box">
-  <div id="aiSummary"></div>
-</div>
+        function updatePlatformDetails(platform, data) {
+            document.getElementById(`${platform}-detailed-score`).textContent = `${data.compliance_analysis?.compliance_score || 0}`;
+            
+            if (platform === 'fb') {
+                document.getElementById('fb-posts').textContent = data.content_breakdown?.posts || 0;
+                document.getElementById('fb-videos').textContent = data.content_breakdown?.videos || 0;
+                document.getElementById('fb-total').textContent = data.total_posts_delivered || 0;
+            } else if (platform === 'ig') {
+                document.getElementById('ig-carousel').textContent = data.content_types?.carousel || 0;
+                document.getElementById('ig-images').textContent = data.content_types?.image || 0;
+                document.getElementById('ig-videos').textContent = data.content_types?.video || 0;
+                document.getElementById('ig-collab').textContent = data.collaboration_stats?.collaborative_posts || 0;
+                document.getElementById('ig-rate').textContent = data.collaboration_stats?.collaboration_rate || '0';
+                document.getElementById('ig-total').textContent = data.total_posts_delivered || 0;
+            } else if (platform === 'tt') {
+                document.getElementById('tt-videos').textContent = data.content_breakdown?.videos || 0;
+                document.getElementById('tt-images').textContent = data.content_breakdown?.images || 0;
+                document.getElementById('tt-total').textContent = data.total_videos_delivered || 0;
+            }
+        }
 
-</div>
+        function updateAnalysis(platform, analysis) {
+            if (!analysis) return;
 
-</div>
+            document.getElementById(`${platform}-analysis`).textContent = analysis.analysis || 'No analysis available';
+            
+            const metList = document.getElementById(`${platform}-met`);
+            metList.innerHTML = analysis.deliverables_met?.map(item => 
+                `<li><span class="check-icon">✓</span> ${item}</li>`
+            ).join('') || '<li>No deliverables tracked</li>';
 
-<script>
+            const recList = document.getElementById(`${platform}-recommendations`);
+            recList.innerHTML = analysis.recommendations?.map(item => 
+                `<li><span class="tip-icon">💡</span> ${item}</li>`
+            ).join('') || '<li>No recommendations</li>';
+        }
 
-const API_BASE = "http://143.110.178.230:5001";
+        // Initialize
+        window.addEventListener('DOMContentLoaded', loadClients);
 
-const clientSelect = document.getElementById("clientSelect");
-const summaryBtn = document.getElementById("summaryBtn");
-const loading = document.getElementById("loading");
-const errorDiv = document.getElementById("error");
-const summaryDiv = document.getElementById("summary");
-
-const startDate = document.getElementById("startDate");
-const endDate = document.getElementById("endDate");
-
-window.onload = () => {
-  loadClients();
-  setDefaultDates();
-};
-
-function setDefaultDates(){
-  const today = new Date();
-  const past = new Date();
-  past.setDate(today.getDate() - 7);
-
-  startDate.value = past.toISOString().split("T")[0];
-  endDate.value = today.toISOString().split("T")[0];
-}
-
-async function loadClients(){
-  try{
-    const res = await fetch(`${API_BASE}/clients`);
-    const clients = await res.json();
-
-    clientSelect.innerHTML = '<option value="">-- Choose a client --</option>';
-
-    clients.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value = c.name;
-      opt.textContent = c.name;
-      clientSelect.appendChild(opt);
-    });
-
-  }catch(err){
-    errorDiv.textContent = "Failed to load clients";
-  }
-}
-
-summaryBtn.onclick = async () => {
-
-  const client = clientSelect.value;
-  if(!client) return alert("Select client");
-
-  summaryBtn.disabled = true;
-  loading.style.display = "block";
-  summaryDiv.style.display = "none";
-
-  try{
-
-    const res = await fetch(
-      `${API_BASE}/summary/${encodeURIComponent(client)}/range?start_date=${startDate.value}&end_date=${endDate.value}`
-    );
-
-    const data = await res.json();
-
-    const ig = data.summary.instagram || {};
-    const fb = data.summary.facebook || {};
-    const tt = data.summary.tiktok || {};
-
-    // Instagram
-    document.getElementById("igTotal").textContent = ig.total ?? 0;
-    document.getElementById("igVideo").textContent = ig.video ?? 0;
-    document.getElementById("igCarousel").textContent = ig.carousel ?? 0;
-    document.getElementById("igStatic").textContent = ig.static ?? 0;
- 
-
-
-    // Facebook
-    document.getElementById("fbTotal").textContent = fb.total ?? 0;
-    document.getElementById("fbReel").textContent = fb.reel ?? 0;
-    document.getElementById("fbPost").textContent = fb.post ?? 0;
-
-    // TikTok
-    document.getElementById("ttTotal").textContent = tt.total ?? 0;
-
-    // AI
-    const aiText = data.summary.ai_summary || "";
-    document.getElementById("aiSummary").innerHTML =
-      DOMPurify.sanitize(marked.parse(aiText));
-
-    summaryDiv.style.display = "block";
-
-  }catch(err){
-    errorDiv.textContent = err.message;
-  }finally{
-    loading.style.display = "none";
-    summaryBtn.disabled = false;
-  }
-};
-
-</script>
-
+        // Handle touch interactions
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            item.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
 </body>
 </html>
