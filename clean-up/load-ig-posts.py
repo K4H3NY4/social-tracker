@@ -3,7 +3,7 @@ from datetime import datetime
 from models import SessionLocal, InstagramPost as Post
 
 # ================= CONFIGURATION =================
-JSON_FILE = "ig-sample.json"  # path to your JSON file
+JSON_FILE = "instagram_posts.json"  # path to your JSON file
 # =================================================
 
 # ================= DATABASE SESSION =================

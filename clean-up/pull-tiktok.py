@@ -10,8 +10,8 @@ params = {
 	"include_errors": "true",
 }
 data = [
-	{"url":"https://www.tiktok.com/@lg_eastafrica"},
-	{"url":"https://www.tiktok.com/@bascopaintskenya"},
+	{"url":"https://www.tiktok.com/@lg_eastafrica","num_of_posts":10},
+	{"url":"https://www.tiktok.com/@bascopaintskenya","num_of_posts":10},
 ]
 
 response = requests.post(url, headers=headers, params=params, json=data)

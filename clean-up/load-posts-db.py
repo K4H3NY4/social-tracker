@@ -3,6 +3,14 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
+
+description
+date_posted
+content_type
+coauthor_producers
+shortcode, content_id,
+user_posted
+
 # ================= CONFIGURATION =================
 JSON_FILE = "festivebreadke_posts.json"
 DB_FILE = "instagram_clients.db"
