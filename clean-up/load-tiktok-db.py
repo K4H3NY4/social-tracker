@@ -3,7 +3,7 @@ from datetime import datetime
 from models import SessionLocal, TikTokVideo
 
 # ================= CONFIGURATION =================
-JSON_FILE = "tiktok-sample.json"  # path to your JSON file
+JSON_FILE = "tiktok-posts.json"  # path to your JSON file
 # =================================================
 
 # ================= DATABASE SESSION =================
