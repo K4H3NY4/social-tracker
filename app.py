@@ -304,7 +304,7 @@ def analyze_contract_compliance(contract: str, posts: list, username: str, date_
         """
         
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3-flash-preview",
             contents=prompt
         )
         
@@ -607,7 +607,7 @@ def get_all_clients():
             'facebook': client.facebook,
             'instagram': client.instagram,
             'tiktok': client.tiktok,
-            'contract': client.contract[:100] + '...' if client.contract and len(client.contract) > 100 else client.contract
+            'contract': client.contract
         } for client in clients]
         
         return jsonify({

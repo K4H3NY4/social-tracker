@@ -39,9 +39,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen w-full flex">
       {/* Left panel — branding & features */}
-      <div className="hidden lg:flex lg:w-[480px] xl:w-[540px] flex-col justify-between p-12 relative overflow-hidden border-r border-white/[0.04]">
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[540px] flex-shrink-0 flex-col justify-between p-12 relative overflow-hidden border-r border-white/[0.04]">
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-accent-lime/10 via-transparent to-accent-purple/10" />
 
@@ -51,21 +51,21 @@ export default function LoginPage() {
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-accent-lime to-accent-lime/60 flex items-center justify-center shadow-[0_0_24px_rgba(204,243,129,0.3)]">
               <Zap className="w-5 h-5 text-[#050505]" strokeWidth={2.5} />
             </div>
-            <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold tracking-tight">
-              <span className="text-accent-lime">Craig</span> AI
+            <span className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight">
+              <span className="text-text-primary">Cr</span><span className="text-accent-lime">AI</span><span className="text-text-primary">g</span>
             </span>
           </div>
 
           {/* Headline */}
           <h1 className="font-[family-name:var(--font-space-grotesk)] text-5xl font-bold leading-[1.1] tracking-tight mb-4">
-            Social Media
+            Smarter Social
             <br />
-            <span className="text-accent-lime">Compliance</span>
+            <span className="text-accent-lime">Media</span>
             <br />
-            Intelligence
+            Analytics
           </h1>
           <p className="text-text-secondary text-lg leading-relaxed max-w-sm">
-            AI-powered contract compliance tracking across Facebook, Instagram &amp; TikTok.
+            Track performance, measure deliverables, and get AI-driven insights across all your platforms.
           </p>
         </div>
 
@@ -97,27 +97,32 @@ export default function LoginPage() {
         {/* Bottom text */}
         <div className="relative z-10 pt-8">
           <p className="text-xs text-text-tertiary">
-            &copy; 2026 Craig AI &bull; A Creativedge tool
+            &copy; 2026 CrAIg &bull; A Creativedge tool
           </p>
         </div>
       </div>
 
       {/* Right panel — login form, perfectly centered */}
-      <div className="flex-1 flex items-center justify-center min-h-screen p-6 sm:p-12">
+      <div className="flex-1 flex items-center justify-center min-h-screen px-5 py-10 sm:p-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-[400px]"
+          className="w-full max-w-[440px]"
         >
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent-lime to-accent-lime/60 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-[#050505]" strokeWidth={2.5} />
+          {/* Mobile logo + tagline */}
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent-lime to-accent-lime/60 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-[#050505]" strokeWidth={2.5} />
+              </div>
+              <span className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold">
+                <span className="text-text-primary">Cr</span><span className="text-accent-lime">AI</span><span className="text-text-primary">g</span>
+              </span>
             </div>
-            <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold">
-              <span className="text-accent-lime">Craig</span> AI
-            </span>
+            <p className="text-sm text-text-tertiary text-center max-w-[280px]">
+              AI-powered social media compliance tracking
+            </p>
           </div>
 
           <h2 className="font-[family-name:var(--font-space-grotesk)] text-3xl font-bold tracking-tight mb-2">
@@ -219,7 +224,7 @@ export default function LoginPage() {
           </p>
 
           <p className="text-center text-[11px] text-text-tertiary/50 mt-3 lg:hidden">
-            &copy; 2026 Craig AI &bull; A Creativedge tool
+            &copy; 2026 CrAIg &bull; A Creativedge tool
           </p>
         </motion.div>
       </div>

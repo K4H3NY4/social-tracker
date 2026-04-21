@@ -23,7 +23,7 @@ export function BentoCard({
       transition={{ duration: 0.4, delay, ease: "easeOut" }}
       className={`${
         gradient || "bg-gradient-to-b from-[#1a1a1a] to-[#121212]"
-      } rounded-[32px] border border-border transition-all hover:border-border-hover hover:-translate-y-0.5 ${className}`}
+      } rounded-[24px] sm:rounded-[32px] border border-border transition-all hover:border-border-hover hover:-translate-y-0.5 ${className}`}
     >
       {children}
     </motion.div>

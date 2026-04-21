@@ -32,11 +32,12 @@ export function Header({ clientName }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between h-[72px] px-6 border-b border-border bg-bg-primary/80 backdrop-blur-xl sticky top-0 z-40">
+    <header className="flex items-center justify-between h-[56px] sm:h-[72px] px-4 sm:px-6 border-b border-border bg-bg-primary/80 backdrop-blur-xl sticky top-0 z-40">
       <div className="flex items-center gap-4">
-        <h1 className="font-[family-name:var(--font-space-grotesk)] text-lg font-bold tracking-tight">
-          <span className="text-accent-lime">Craig</span>
-          <span className="text-text-primary"> AI</span>
+        <h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight">
+          <span className="text-text-primary">Cr</span>
+          <span className="text-accent-lime">AI</span>
+          <span className="text-text-primary">g</span>
         </h1>
       </div>
 

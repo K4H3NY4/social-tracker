@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Craig AI | Social Compliance",
+  title: "CrAIg | Social Compliance",
   description: "AI-powered social media compliance dashboard",
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({
       lang="en"
       className={`${plusJakarta.variable} ${spaceGrotesk.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex">
+      <body className="min-h-full flex" suppressHydrationWarning>
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
