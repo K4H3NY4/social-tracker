@@ -58,6 +58,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
 
         .logo {
@@ -178,6 +179,75 @@
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        .btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-section {
+            padding: 24px 16px;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        .auth-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .auth-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .auth-input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+
+        .auth-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .auth-message {
+            min-height: 18px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .auth-message.error {
+            color: var(--danger);
+        }
+
+        .auth-message.success {
+            color: var(--success);
         }
 
         /* ═══════════════════════════════════════════════════════
@@ -512,6 +582,40 @@
         .cross-icon { color: var(--danger); font-weight: 700; flex-shrink: 0; }
         .tip-icon { color: var(--accent-primary); flex-shrink: 0; }
 
+        .theme-summary {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .theme-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .theme-item {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .theme-name {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .theme-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
         /* ═══════════════════════════════════════════════════════
            LOADING & NO DATA
            ═══════════════════════════════════════════════════════ */
@@ -626,6 +730,10 @@
                 align-self: stretch;
             }
 
+            .auth-actions {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .metrics-container {
                 gap: 20px;
                 padding: 30px 24px;
@@ -698,6 +806,7 @@
                 font-size: 13px;
                 padding: 10px 12px;
             }
+
         }
 
         /* ═══════════════════════════════════════════════════════
@@ -772,6 +881,7 @@
     <header class="header">
         <div class="header-top">
             <div class="logo">crAIg</div>
+            <button class="btn secondary hidden" id="logoutBtn" onclick="logout()">Logout</button>
         </div>
         <div class="header-controls">
             <!-- Large Client Select -->
@@ -797,6 +907,22 @@
             <button class="btn" id="refreshBtn" onclick="loadData()">Refresh</button>
         </div>
     </header>
+
+    <div class="auth-section hidden" id="authSection">
+        <form class="auth-card" id="authForm">
+            <div>
+                <div class="auth-title">Login</div>
+                <div class="auth-subtitle">Use your email and password to access the dashboard API.</div>
+            </div>
+            <input class="auth-input" type="email" id="authEmail" placeholder="Email" autocomplete="email" required>
+            <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password" required>
+            <div class="auth-actions">
+                <button class="btn" type="submit" id="loginBtn">Login</button>
+                <button class="btn secondary" type="button" id="registerBtn" onclick="register()">Create Account</button>
+            </div>
+            <div class="auth-message" id="authMessage"></div>
+        </form>
+    </div>
 
     <!-- Main Metrics -->
     <div class="metrics-container">
@@ -1024,6 +1150,39 @@
             <div class="analysis-list-title">💡 Recommendations</div>
             <ul class="analysis-list" id="tt-recommendations"></ul>
         </div>
+
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">Facebook Themes</div>
+            </div>
+            <div class="theme-summary" id="fb-theme-summary">Loading...</div>
+            <div>
+                <div class="analysis-list-title">Themes</div>
+                <div class="theme-list" id="fb-theme-list"></div>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">Instagram Themes</div>
+            </div>
+            <div class="theme-summary" id="ig-theme-summary">Loading...</div>
+            <div>
+                <div class="analysis-list-title">Themes</div>
+                <div class="theme-list" id="ig-theme-list"></div>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <div class="analysis-header">
+                <div class="analysis-title">TikTok Themes</div>
+            </div>
+            <div class="theme-summary" id="tt-theme-summary">Loading...</div>
+            <div>
+                <div class="analysis-list-title">Themes</div>
+                <div class="theme-list" id="tt-theme-list"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom Navigation -->
@@ -1048,13 +1207,179 @@
 
     <script>
         const API_BASE = '/api';
+        const TOKEN_KEY = 'post_tracker_jwt';
+        let authToken = localStorage.getItem(TOKEN_KEY) || '';
         let selectedClient = { name: '', facebook: '', instagram: '', tiktok: '' };
+
+        function setAuthMessage(message, type = '') {
+            const el = document.getElementById('authMessage');
+            el.textContent = message || '';
+            el.className = `auth-message ${type}`.trim();
+        }
+
+        function setAuthenticatedState(isAuthenticated) {
+            document.getElementById('authSection').classList.toggle('hidden', isAuthenticated);
+            document.querySelector('.header-controls').classList.toggle('hidden', !isAuthenticated);
+            document.querySelector('.metrics-container').classList.toggle('hidden', !isAuthenticated);
+            document.querySelector('.status-cards').classList.toggle('hidden', !isAuthenticated);
+            document.querySelector('.bottom-nav').classList.toggle('hidden', !isAuthenticated);
+            document.getElementById('logoutBtn').classList.toggle('hidden', !isAuthenticated);
+
+            if (!isAuthenticated) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('noData').classList.add('hidden');
+                document.getElementById('platformsSection').classList.add('hidden');
+                document.getElementById('analysisSection').classList.add('hidden');
+            }
+        }
+
+        function authHeaders() {
+            return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+        }
+
+        async function authFetch(url, options = {}) {
+            const headers = {
+                ...(options.headers || {}),
+                ...authHeaders()
+            };
+            const response = await fetch(url, { ...options, headers });
+
+            if (response.status === 401) {
+                logout('Session expired. Please log in again.');
+                throw new Error('Unauthorized');
+            }
+
+            return response;
+        }
+
+        async function submitAuth(mode) {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+
+            loginBtn.disabled = true;
+            registerBtn.disabled = true;
+            setAuthMessage(mode === 'register' ? 'Creating account...' : 'Logging in...');
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+
+                authToken = data.token;
+                localStorage.setItem(TOKEN_KEY, authToken);
+                setAuthMessage(data.message || 'Authenticated', 'success');
+                setAuthenticatedState(true);
+                await loadClients();
+                await loadData();
+            } catch (error) {
+                setAuthMessage(error.message, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                registerBtn.disabled = false;
+            }
+        }
+
+        function register() {
+            submitAuth('register');
+        }
+
+        function logout(message = '') {
+            authToken = '';
+            localStorage.removeItem(TOKEN_KEY);
+            selectedClient = { name: '', facebook: '', instagram: '', tiktok: '' };
+            setAuthenticatedState(false);
+            setAuthMessage(message);
+        }
+
+        async function fetchCaptionThemes(platform, username, startDate, endDate) {
+            if (!username) {
+                return {
+                    analysis: {
+                        summary: 'No username configured for this platform.',
+                        themes: []
+                    }
+                };
+            }
+
+            try {
+                const url = `${API_BASE}/${platform}/${username}/caption-themes?start=${startDate}&end=${endDate}&limit=100`;
+                const response = await authFetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    return {
+                        analysis: {
+                            summary: data.error || 'Theme analysis failed.',
+                            themes: []
+                        }
+                    };
+                }
+
+                return data;
+            } catch (error) {
+                return {
+                    analysis: {
+                        summary: error.message || 'Theme analysis failed.',
+                        themes: []
+                    }
+                };
+            }
+        }
+
+        function createTextElement(tagName, className, text) {
+            const element = document.createElement(tagName);
+            if (className) element.className = className;
+            element.textContent = text;
+            return element;
+        }
+
+        function updateThemeAnalysis(platform, themeData) {
+            const analysis = themeData?.analysis || {};
+            const summaryEl = document.getElementById(`${platform}-theme-summary`);
+            const listEl = document.getElementById(`${platform}-theme-list`);
+            const themes = Array.isArray(analysis.themes) ? analysis.themes : [];
+            const topics = Array.isArray(analysis.topics) ? analysis.topics : [];
+
+            summaryEl.textContent = analysis.summary || 'No summary available.';
+            listEl.innerHTML = '';
+
+            const items = themes.length ? themes : topics.map(topic => ({
+                theme: topic.topic,
+                description: topic.what_was_said,
+                post_count: topic.post_count
+            }));
+
+            if (!items.length) {
+                listEl.appendChild(createTextElement('div', 'theme-description', 'No themes found for this date range.'));
+                return;
+            }
+
+            items.slice(0, 6).forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'theme-item';
+
+                const postCountValue = Number(item.post_count);
+                const postCount = Number.isFinite(postCountValue) ? ` (${postCountValue} posts)` : '';
+                card.appendChild(createTextElement('div', 'theme-name', `${item.theme || 'Theme'}${postCount}`));
+                card.appendChild(createTextElement('div', 'theme-description', item.description || 'No description available.'));
+                listEl.appendChild(card);
+            });
+        }
 
         // Load clients
         async function loadClients() {
             const clientSelect = document.getElementById('clientSelect');
             try {
-                const response = await fetch(`${API_BASE}/clients`);
+                const response = await authFetch(`${API_BASE}/clients`);
                 const data = await response.json();
                 
                 if (data.clients && data.clients.length > 0) {
@@ -1090,6 +1415,11 @@
             loadData();
         });
 
+        document.getElementById('authForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            submitAuth('login');
+        });
+
         // Toggle section visibility
         function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
@@ -1122,13 +1452,19 @@
             document.getElementById('analysisSection').classList.add('hidden');
 
             try {
-                const [fbData, igData, ttData] = await Promise.all([
-                    fetch(`${API_BASE}/facebook/${selectedClient.facebook}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
-                    fetch(`${API_BASE}/instagram/${selectedClient.instagram}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
-                    fetch(`${API_BASE}/tiktok/${selectedClient.tiktok}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json())
+                const [fbData, igData, ttData, fbThemes, igThemes, ttThemes] = await Promise.all([
+                    authFetch(`${API_BASE}/facebook/${selectedClient.facebook}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
+                    authFetch(`${API_BASE}/instagram/${selectedClient.instagram}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
+                    authFetch(`${API_BASE}/tiktok/${selectedClient.tiktok}/contract-compliance?start=${startDate}&end=${endDate}`).then(r => r.json()),
+                    fetchCaptionThemes('facebook', selectedClient.facebook, startDate, endDate),
+                    fetchCaptionThemes('instagram', selectedClient.instagram, startDate, endDate),
+                    fetchCaptionThemes('tiktok', selectedClient.tiktok, startDate, endDate)
                 ]);
 
                 updateDashboard(fbData, igData, ttData);
+                updateThemeAnalysis('fb', fbThemes);
+                updateThemeAnalysis('ig', igThemes);
+                updateThemeAnalysis('tt', ttThemes);
                 
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('platformsSection').classList.remove('hidden');
@@ -1224,7 +1560,12 @@
         }
 
         // Initialize
-        window.addEventListener('DOMContentLoaded', loadClients);
+        window.addEventListener('DOMContentLoaded', () => {
+            setAuthenticatedState(Boolean(authToken));
+            if (authToken) {
+                loadClients();
+            }
+        });
 
         // Handle touch interactions
         document.querySelectorAll('.nav-item').forEach(item => {

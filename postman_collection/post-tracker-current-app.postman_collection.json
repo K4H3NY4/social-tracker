@@ -1,0 +1,604 @@
+{
+  "info": {
+    "_postman_id": "9d5de9ab-6b37-4c6d-8f2b-f50b8f1e8a21",
+    "name": "Post Tracker Current App API",
+    "description": "Prefilled Postman collection for the Flask endpoints currently defined in app.py.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "auth_email",
+      "value": "admin@example.com",
+      "type": "string"
+    },
+    {
+      "key": "auth_password",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "facebook_username",
+      "value": "basco_paints",
+      "type": "string"
+    },
+    {
+      "key": "instagram_username",
+      "value": "basco_paints",
+      "type": "string"
+    },
+    {
+      "key": "tiktok_username",
+      "value": "basco_paints",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "start_date",
+      "value": "2026-03-01",
+      "type": "string"
+    },
+    {
+      "key": "end_date",
+      "value": "2026-03-31",
+      "type": "string"
+    },
+    {
+      "key": "caption_limit",
+      "value": "100",
+      "type": "string"
+    },
+    {
+      "key": "search_query",
+      "value": "basco",
+      "type": "string"
+    },
+    {
+      "key": "sample_client_name",
+      "value": "Sample Client",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) pm.collectionVariables.set('jwt_token', data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{auth_email}}\",\n  \"password\": \"{{auth_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a user and stores the returned JWT in the jwt_token collection variable."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) pm.collectionVariables.set('jwt_token', data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{auth_email}}\",\n  \"password\": \"{{auth_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logs in and stores the returned JWT in the jwt_token collection variable."
+          }
+        },
+        {
+          "name": "Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Returns the authenticated user from the bearer token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Core",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Serves templates/index.html."
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Checks database connectivity and whether AI is configured."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contract Compliance",
+      "item": [
+        {
+          "name": "Facebook Contract Compliance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/facebook/{{facebook_username}}/contract-compliance?start={{start_date}}&end={{end_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "facebook",
+                "{{facebook_username}}",
+                "contract-compliance"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                }
+              ]
+            },
+            "description": "Analyzes Facebook deliverables for a username and optional date range."
+          }
+        },
+        {
+          "name": "Instagram Contract Compliance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/instagram/{{instagram_username}}/contract-compliance?start={{start_date}}&end={{end_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "instagram",
+                "{{instagram_username}}",
+                "contract-compliance"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                }
+              ]
+            },
+            "description": "Analyzes Instagram deliverables, including co-authored collaboration posts."
+          }
+        },
+        {
+          "name": "TikTok Contract Compliance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tiktok/{{tiktok_username}}/contract-compliance?start={{start_date}}&end={{end_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tiktok",
+                "{{tiktok_username}}",
+                "contract-compliance"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                }
+              ]
+            },
+            "description": "Analyzes TikTok deliverables for a username and optional date range."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Caption Themes",
+      "item": [
+        {
+          "name": "Facebook Caption Themes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/facebook/{{facebook_username}}/caption-themes?start={{start_date}}&end={{end_date}}&limit={{caption_limit}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "facebook",
+                "{{facebook_username}}",
+                "caption-themes"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{caption_limit}}"
+                }
+              ]
+            },
+            "description": "Extracts themes and topics from Facebook post content."
+          }
+        },
+        {
+          "name": "Instagram Caption Themes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/instagram/{{instagram_username}}/caption-themes?start={{start_date}}&end={{end_date}}&limit={{caption_limit}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "instagram",
+                "{{instagram_username}}",
+                "caption-themes"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{caption_limit}}"
+                }
+              ]
+            },
+            "description": "Extracts themes and topics from Instagram captions, including co-authored posts."
+          }
+        },
+        {
+          "name": "TikTok Caption Themes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tiktok/{{tiktok_username}}/caption-themes?start={{start_date}}&end={{end_date}}&limit={{caption_limit}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tiktok",
+                "{{tiktok_username}}",
+                "caption-themes"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "{{start_date}}"
+                },
+                {
+                  "key": "end",
+                  "value": "{{end_date}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{caption_limit}}"
+                }
+              ]
+            },
+            "description": "Extracts themes and topics from TikTok descriptions."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "List Clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ]
+            },
+            "description": "Returns all clients for dropdown selection."
+          }
+        },
+        {
+          "name": "Get Client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clients/{{client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "{{client_id}}"
+              ]
+            },
+            "description": "Returns a single client by ID."
+          }
+        },
+        {
+          "name": "Create Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{sample_client_name}}\",\n  \"facebook\": \"sample_facebook_handle\",\n  \"instagram\": \"sample_instagram_handle\",\n  \"tiktok\": \"sample_tiktok_handle\",\n  \"contract\": \"Deliver 12 Instagram posts, 4 Facebook posts, and 4 TikTok videos between {{start_date}} and {{end_date}}.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ]
+            },
+            "description": "Creates a new client. Change sample_client_name before sending if that name already exists."
+          }
+        },
+        {
+          "name": "Update Client",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{sample_client_name}} Updated\",\n  \"facebook\": \"updated_facebook_handle\",\n  \"instagram\": \"updated_instagram_handle\",\n  \"tiktok\": \"updated_tiktok_handle\",\n  \"contract\": \"Updated contract: deliver 16 total posts between {{start_date}} and {{end_date}}.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clients/{{client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "{{client_id}}"
+              ]
+            },
+            "description": "Updates an existing client. All body fields are optional in the API."
+          }
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clients/{{client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "{{client_id}}"
+              ]
+            },
+            "description": "Deletes a client by ID."
+          }
+        },
+        {
+          "name": "Search Clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clients/search?q={{search_query}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{search_query}}"
+                }
+              ]
+            },
+            "description": "Searches clients by name or social handle."
+          }
+        }
+      ]
+    }
+  ]
+}

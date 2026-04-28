@@ -1,0 +1,590 @@
+{
+  "info": {
+    "_postman_id": "7d4b1ce1-bfd2-4f2f-a1a8-5b8fcfa3bcb0",
+    "name": "Post Tracker API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Core",
+      "item": [
+        {
+          "name": "Index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Instagram",
+      "item": [
+        {
+          "name": "List Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Post By Content ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/ABC123XYZ",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "ABC123XYZ"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_id\": \"ABC123XYZ\",\n  \"description\": \"New campaign launch post\",\n  \"date_posted\": \"2026-03-27 09:30:00\",\n  \"user_posted\": \"creativeedge\",\n  \"content_type\": \"image\",\n  \"coauthor_producers\": \"brand_partner\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/posts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/ABC123XYZ",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "ABC123XYZ"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/search?q=campaign",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "campaign"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Posts By User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/user/creativeedge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "user",
+                "creativeedge"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Posts By User Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/creativeedge/range?start=2026-03-01T00:00:00&end=2026-03-27T23:59:59",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "creativeedge",
+                "range"
+              ],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "2026-03-01T00:00:00"
+                },
+                {
+                  "key": "end",
+                  "value": "2026-03-27T23:59:59"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Posts By User Last 7 Days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/posts/creativeedge/last7days",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "posts",
+                "creativeedge",
+                "last7days"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TikTok",
+      "item": [
+        {
+          "name": "List Videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tiktok?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Video By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tiktok/752341998877",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok",
+                "752341998877"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Video",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"video_id\": \"752341998877\",\n  \"author\": \"creativeedge\",\n  \"description\": \"Behind the scenes\",\n  \"create_time\": \"2026-03-27 11:00:00\",\n  \"post_type\": \"video\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tiktok",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Video",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tiktok/752341998877",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok",
+                "752341998877"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Videos By Author",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tiktok/author/creativeedge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok",
+                "author",
+                "creativeedge"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Videos By Author Last 7 Days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tiktok/author/creativeedge/last7days",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tiktok",
+                "author",
+                "creativeedge",
+                "last7days"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "List Clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Client By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clients/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Creative Edge\",\n  \"instagram\": \"@creativeedge\",\n  \"facebook\": \"creativeedgefb\",\n  \"tiktok\": \"creativeedge\",\n  \"contract\": \"12 posts per month\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Client",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Creative Edge Ltd\",\n  \"instagram\": \"@creativeedge\",\n  \"facebook\": \"creativeedgefb\",\n  \"tiktok\": \"creativeedge_ke\",\n  \"contract\": \"16 posts per month\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clients/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/clients/search?q=creative",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "creative"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Facebook",
+      "item": [
+        {
+          "name": "List Facebook Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/facebook/posts?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "facebook",
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Facebook Post By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/facebook/posts/9988776655",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "facebook",
+                "posts",
+                "9988776655"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Facebook Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"post_id\": \"9988776655\",\n  \"user_username_raw\": \"creativeedgefb\",\n  \"content\": \"Our latest offer is live\",\n  \"post_type\": \"post\",\n  \"date_posted\": \"2026-03-27T14:30:00+00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/facebook/posts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "facebook",
+                "posts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Facebook Post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/facebook/posts/9988776655",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "facebook",
+                "posts",
+                "9988776655"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Facebook Posts By User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/facebook/posts/user/creativeedgefb",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "facebook",
+                "posts",
+                "user",
+                "creativeedgefb"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

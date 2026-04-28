@@ -1,20 +1,26 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from datetime import datetime
 from google import genai
+from werkzeug.security import check_password_hash, generate_password_hash
+import base64
+import hashlib
+import hmac
 import os
 import json
 import re
+import time
 from collections import Counter
 from dotenv import load_dotenv
 
-from db.session import SessionLocal
+from db.session import Base, SessionLocal, engine
 from models.facebook import FacebookPost
 from models.instagram import InstagramPost
 from models.tiktok import TikTokVideo
 from models.client import Client
+from models.user import User
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +34,11 @@ CORS(app)
 # ✅ Initialize Google GenAI Client
 api_key = os.environ.get("API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
+jwt_secret = os.environ.get("JWT_SECRET") or os.environ.get("SECRET_KEY") or "dev-change-me"
+jwt_expires_hours = int(os.environ.get("JWT_EXPIRES_HOURS", "24"))
+
+# Create the users table if it does not exist yet.
+Base.metadata.create_all(bind=engine, tables=[User.__table__])
 
 
 # ═══════════════════════════════════════════════════════
@@ -38,6 +49,192 @@ client = genai.Client(api_key=api_key) if api_key else None
 def dashboard():
     """Serve the dashboard HTML file"""
     return send_from_directory('templates', 'index.html')
+
+
+PUBLIC_API_PATHS = {
+    '/api/auth/register',
+    '/api/auth/login'
+}
+
+
+def normalize_email(email: str) -> str:
+    return (email or '').strip().lower()
+
+
+def b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
+
+
+def b64url_decode(data: str) -> bytes:
+    padding = '=' * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+
+def create_access_token(user: User) -> str:
+    now = int(time.time())
+    payload = {
+        'sub': str(user.id),
+        'email': user.email,
+        'iat': now,
+        'exp': now + (jwt_expires_hours * 60 * 60)
+    }
+    header = {'alg': 'HS256', 'typ': 'JWT'}
+
+    encoded_header = b64url_encode(json.dumps(header, separators=(',', ':'), sort_keys=True).encode('utf-8'))
+    encoded_payload = b64url_encode(json.dumps(payload, separators=(',', ':'), sort_keys=True).encode('utf-8'))
+    signing_input = f'{encoded_header}.{encoded_payload}'.encode('ascii')
+    signature = hmac.new(jwt_secret.encode('utf-8'), signing_input, hashlib.sha256).digest()
+
+    return f'{encoded_header}.{encoded_payload}.{b64url_encode(signature)}'
+
+
+def decode_access_token(token: str):
+    try:
+        encoded_header, encoded_payload, encoded_signature = token.split('.')
+        signing_input = f'{encoded_header}.{encoded_payload}'.encode('ascii')
+        expected_signature = hmac.new(jwt_secret.encode('utf-8'), signing_input, hashlib.sha256).digest()
+        provided_signature = b64url_decode(encoded_signature)
+
+        if not hmac.compare_digest(expected_signature, provided_signature):
+            return None, 'Invalid token signature'
+
+        header = json.loads(b64url_decode(encoded_header).decode('utf-8'))
+        if header.get('alg') != 'HS256':
+            return None, 'Unsupported token algorithm'
+
+        payload = json.loads(b64url_decode(encoded_payload).decode('utf-8'))
+        if int(payload.get('exp', 0)) < int(time.time()):
+            return None, 'Token has expired'
+
+        return payload, None
+    except Exception:
+        return None, 'Invalid token'
+
+
+def get_bearer_token() -> str:
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return ''
+    return auth_header.split(' ', 1)[1].strip()
+
+
+@app.before_request
+def require_jwt_for_api():
+    if request.method == 'OPTIONS':
+        return None
+
+    if not request.path.startswith('/api/'):
+        return None
+
+    if request.path in PUBLIC_API_PATHS:
+        return None
+
+    token = get_bearer_token()
+    if not token:
+        return jsonify({'error': 'Missing bearer token'}), 401
+
+    claims, error = decode_access_token(token)
+    if error:
+        return jsonify({'error': error}), 401
+
+    db: Session = SessionLocal()
+    try:
+        user_id = int(claims.get('sub'))
+        user = db.execute(
+            select(User).where(User.id == user_id, User.is_active.is_(True))
+        ).scalars().first()
+
+        if not user:
+            return jsonify({'error': 'User not found or inactive'}), 401
+
+        g.current_user = user.to_dict()
+    except Exception:
+        return jsonify({'error': 'Invalid token subject'}), 401
+    finally:
+        db.close()
+
+    return None
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    db: Session = SessionLocal()
+
+    try:
+        data = request.get_json(silent=True) or {}
+        email = normalize_email(data.get('email'))
+        password = data.get('password') or ''
+
+        if not email or '@' not in email:
+            return jsonify({'error': 'Valid email is required'}), 400
+
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+        existing = db.execute(
+            select(User).where(User.email == email)
+        ).scalars().first()
+
+        if existing:
+            return jsonify({'error': 'User with this email already exists'}), 409
+
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(password)
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        return jsonify({
+            'message': 'User created successfully',
+            'token': create_access_token(user),
+            'token_type': 'Bearer',
+            'expires_in_hours': jwt_expires_hours,
+            'user': user.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login_user():
+    db: Session = SessionLocal()
+
+    try:
+        data = request.get_json(silent=True) or {}
+        email = normalize_email(data.get('email'))
+        password = data.get('password') or ''
+
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
+
+        user = db.execute(
+            select(User).where(User.email == email)
+        ).scalars().first()
+
+        if not user or not user.is_active or not check_password_hash(user.password_hash, password):
+            return jsonify({'error': 'Invalid email or password'}), 401
+
+        return jsonify({
+            'message': 'Login successful',
+            'token': create_access_token(user),
+            'token_type': 'Bearer',
+            'expires_in_hours': jwt_expires_hours,
+            'user': user.to_dict()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/auth/me', methods=['GET'])
+def get_current_user():
+    return jsonify({'user': g.current_user}), 200
 
 
 # ═══════════════════════════════════════════════════════
@@ -1190,12 +1387,14 @@ def health_check():
         db.execute(select(InstagramPost).limit(1))
         db.execute(select(TikTokVideo).limit(1))
         db.execute(select(Client).limit(1))
+        db.execute(select(User).limit(1))
         db.close()
         
         return jsonify({
             'status': 'ok',
             'database': 'connected',
             'platforms': ['facebook', 'instagram', 'tiktok'],
+            'auth': 'jwt',
             'ai_configured': client is not None
         }), 200
     except Exception as e:
