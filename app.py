@@ -6,6 +6,8 @@ from datetime import datetime
 from google import genai
 import os
 import json
+import re
+from collections import Counter
 from dotenv import load_dotenv
 
 from db.session import SessionLocal
@@ -160,6 +162,159 @@ def count_collaborative_posts(posts: list, username: str = None) -> dict:
         'total': total,
         'collaboration_rate': round((collaborative_count / total * 100), 2) if total > 0 else 0
     }
+
+
+CAPTION_STOPWORDS = {
+    'the', 'and', 'for', 'you', 'your', 'with', 'this', 'that', 'from', 'are',
+    'was', 'were', 'have', 'has', 'had', 'but', 'not', 'our', 'out', 'all',
+    'can', 'will', 'just', 'now', 'new', 'get', 'got', 'its', 'it', 'is',
+    'in', 'on', 'at', 'to', 'of', 'a', 'an', 'be', 'by', 'or', 'as', 'we',
+    'us', 'they', 'their', 'them', 'what', 'when', 'where', 'who', 'why',
+    'how', 'more', 'up', 'down', 'over', 'under', 'into', 'than', 'then',
+    'so', 'if', 'about', 'here', 'there', 'today', 'tomorrow', 'yesterday',
+    'make', 'made', 'like', 'love', 'use', 'using', 'via', 'also', 'still',
+    'see', 'let', 'lets', 'one', 'two', 'per', 'amp'
+}
+
+
+def parse_ai_json(response_text: str) -> dict:
+    response_text = response_text.strip()
+
+    if response_text.startswith('```'):
+        response_text = response_text.split('```')[1]
+        if response_text.startswith('json'):
+            response_text = response_text[4:]
+
+    return json.loads(response_text.strip())
+
+
+def shorten_caption(caption: str, max_length: int = 220) -> str:
+    caption = re.sub(r'\s+', ' ', caption or '').strip()
+    if len(caption) <= max_length:
+        return caption
+    return caption[:max_length].rstrip() + '...'
+
+
+def keyword_caption_analysis(caption_records: list) -> dict:
+    all_text = ' '.join(record.get('caption', '') for record in caption_records)
+    hashtags = Counter(tag.lower() for tag in re.findall(r'#([A-Za-z0-9_]+)', all_text))
+    mentions = Counter(mention.lower() for mention in re.findall(r'@([A-Za-z0-9_.]+)', all_text))
+
+    cleaned_text = re.sub(r'https?://\S+', ' ', all_text.lower())
+    cleaned_text = re.sub(r'[@#][A-Za-z0-9_.]+', ' ', cleaned_text)
+    words = [
+        word for word in re.findall(r"[a-zA-Z][a-zA-Z']{2,}", cleaned_text)
+        if word not in CAPTION_STOPWORDS
+    ]
+    top_terms = Counter(words).most_common(10)
+
+    themes = []
+    for term, count in top_terms[:6]:
+        samples = [
+            shorten_caption(record.get('caption', ''))
+            for record in caption_records
+            if term in (record.get('caption') or '').lower()
+        ][:3]
+        themes.append({
+            'theme': term.replace('_', ' ').title(),
+            'description': f'Frequently mentioned caption term appearing {count} times.',
+            'post_count': len(samples),
+            'representative_terms': [term],
+            'sample_captions': samples
+        })
+
+    return {
+        'summary': 'Keyword analysis based on the available captions. Configure API_KEY and GEMINI_MODEL for deeper theme interpretation.',
+        'themes': themes,
+        'topics': [
+            {
+                'topic': term.replace('_', ' ').title(),
+                'what_was_said': f'The captions repeatedly referenced "{term}".',
+                'post_count': sum(1 for record in caption_records if term in (record.get('caption') or '').lower())
+            }
+            for term, _count in top_terms[:8]
+        ],
+        'content_intents': [],
+        'hashtags': [{'tag': tag, 'count': count} for tag, count in hashtags.most_common(12)],
+        'mentions': [{'handle': handle, 'count': count} for handle, count in mentions.most_common(12)],
+        'analysis_source': 'fallback_keyword_analysis'
+    }
+
+
+def analyze_caption_themes(caption_records: list, platform: str, username: str, date_range: dict) -> dict:
+    if not caption_records:
+        return {
+            'summary': 'No captions were available to analyze.',
+            'themes': [],
+            'topics': [],
+            'content_intents': [],
+            'hashtags': [],
+            'mentions': [],
+            'analysis_source': 'none'
+        }
+
+    if not client:
+        return keyword_caption_analysis(caption_records)
+
+    caption_lines = []
+    for index, record in enumerate(caption_records[:80], start=1):
+        caption = shorten_caption(record.get('caption', ''), max_length=500)
+        caption_lines.append(
+            f"{index}. date={record.get('date')}; type={record.get('type')}; caption={caption}"
+        )
+
+    prompt = f"""
+    You are a social media content strategist.
+    Analyze the captions for {platform.upper()} account "{username}".
+    Date range: {date_range.get('start') or 'not specified'} to {date_range.get('end') or 'not specified'}.
+
+    CAPTIONS:
+    {chr(10).join(caption_lines)}
+
+    Identify the main themes and explain what the captions were talking about.
+    Infer only from the caption text. Do not invent products, campaigns, or events that are not present.
+
+    Return ONLY valid JSON with this exact shape:
+    {{
+        "summary": "2-4 sentence plain-English summary of what they talked about",
+        "themes": [
+            {{
+                "theme": "theme name",
+                "description": "what this theme means in the captions",
+                "post_count": 0,
+                "representative_terms": ["term 1", "term 2"],
+                "sample_captions": ["short caption excerpt 1", "short caption excerpt 2"]
+            }}
+        ],
+        "topics": [
+            {{
+                "topic": "specific topic",
+                "what_was_said": "what the posts said about this topic",
+                "post_count": 0
+            }}
+        ],
+        "content_intents": ["promotion", "education", "engagement", "announcement"],
+        "hashtags": [
+            {{"tag": "example", "count": 0}}
+        ],
+        "mentions": [
+            {{"handle": "example", "count": 0}}
+        ]
+    }}
+    """
+
+    try:
+        response = client.models.generate_content(
+            model=os.environ.get("GEMINI_MODEL"),
+            contents=prompt
+        )
+        analysis = parse_ai_json(response.text)
+        analysis['analysis_source'] = 'gemini'
+        return analysis
+    except Exception as e:
+        fallback = keyword_caption_analysis(caption_records)
+        fallback['ai_error'] = str(e)
+        return fallback
 
 
 
@@ -607,6 +762,143 @@ def check_tiktok_contract_compliance(username):
 # ═══════════════════════════════════════════════════════
 # ✅ CLIENT CRUD ENDPOINTS
 # ═══════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════
+# ✅ CAPTION THEME ANALYSIS ENDPOINT
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/<platform>/<username>/caption-themes', methods=['GET'])
+def get_caption_themes(platform, username):
+    """
+    Analyze caption themes and topics for Facebook, Instagram, or TikTok.
+    Example: GET /api/instagram/basco_paints/caption-themes?start=2026-03-01&end=2026-03-31&limit=100
+    """
+    platform = platform.lower().strip()
+    allowed_platforms = {'facebook', 'instagram', 'tiktok'}
+
+    if platform not in allowed_platforms:
+        return jsonify({
+            'error': 'Unsupported platform',
+            'supported_platforms': sorted(allowed_platforms)
+        }), 400
+
+    db: Session = SessionLocal()
+
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        limit = request.args.get('limit', default=100, type=int)
+        limit = max(1, min(limit, 500))
+
+        if platform == 'facebook':
+            stmt = select(FacebookPost).where(FacebookPost.user_username_raw == username)
+
+            if start_date:
+                start = datetime.strptime(start_date, '%Y-%m-%d')
+                stmt = stmt.where(FacebookPost.date_posted >= start)
+
+            if end_date:
+                end = datetime.strptime(end_date, '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+                stmt = stmt.where(FacebookPost.date_posted <= end)
+
+            stmt = stmt.order_by(FacebookPost.date_posted.desc()).limit(limit)
+            posts = db.execute(stmt).scalars().all()
+            caption_records = [
+                {
+                    'id': post.id,
+                    'content_id': post.post_id,
+                    'caption': post.content,
+                    'date': post.date_posted.isoformat() if post.date_posted else None,
+                    'type': post.post_type,
+                    'like_count': post.like_count,
+                    'comment_count': post.comment_count
+                }
+                for post in posts
+                if post.content and post.content.strip()
+            ]
+
+        elif platform == 'instagram':
+            stmt = select(InstagramPost).where(
+                (InstagramPost.user_posted == username) |
+                (InstagramPost.coauthor_producers.like(f'%{username}%'))
+            )
+
+            if start_date:
+                start = datetime.strptime(start_date, '%Y-%m-%d')
+                stmt = stmt.where(InstagramPost.date_posted >= start)
+
+            if end_date:
+                end = datetime.strptime(end_date, '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+                stmt = stmt.where(InstagramPost.date_posted <= end)
+
+            stmt = stmt.order_by(InstagramPost.date_posted.desc()).limit(limit)
+            posts = db.execute(stmt).scalars().all()
+            caption_records = [
+                {
+                    'id': post.id,
+                    'content_id': post.content_id,
+                    'caption': post.description,
+                    'date': post.date_posted.isoformat() if post.date_posted else None,
+                    'type': post.content_type,
+                    'like_count': post.like_count,
+                    'comment_count': post.comment_count,
+                    'user_posted': post.user_posted,
+                    'coauthor_producers': post.coauthor_producers
+                }
+                for post in posts
+                if post.description and post.description.strip()
+            ]
+
+        else:
+            stmt = select(TikTokVideo).where(TikTokVideo.author == username)
+
+            if start_date:
+                start = datetime.strptime(start_date, '%Y-%m-%d')
+                stmt = stmt.where(TikTokVideo.create_time >= start)
+
+            if end_date:
+                end = datetime.strptime(end_date, '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+                stmt = stmt.where(TikTokVideo.create_time <= end)
+
+            stmt = stmt.order_by(TikTokVideo.create_time.desc()).limit(limit)
+            posts = db.execute(stmt).scalars().all()
+            caption_records = [
+                {
+                    'id': video.id,
+                    'content_id': video.video_id,
+                    'caption': video.description,
+                    'date': video.create_time.isoformat() if video.create_time else None,
+                    'type': video.post_type,
+                    'like_count': video.like_count,
+                    'comment_count': video.comment_count
+                }
+                for video in posts
+                if video.description and video.description.strip()
+            ]
+
+        date_range = {'start': start_date, 'end': end_date}
+        analysis = analyze_caption_themes(caption_records, platform, username, date_range)
+
+        return jsonify({
+            'platform': platform,
+            'username': username,
+            'date_range': date_range,
+            'limit': limit,
+            'total_posts_found': len(posts),
+            'captions_analyzed': len(caption_records),
+            'analysis': analysis
+        }), 200
+
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD for start and end.'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
 
 @app.route('/api/clients', methods=['GET'])
 def get_all_clients():
