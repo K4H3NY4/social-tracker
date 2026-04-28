@@ -40,6 +40,7 @@ try:
             content_type=item.get("content_type"),
             date_posted=dt,
             coauthor_producers=coauthors,
+            like_count=item.get("likes"),
         )
 
         # Save or update the post

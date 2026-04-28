@@ -25,7 +25,8 @@ try:
             author=item.get("account_id"),
             description=item.get("description"),
             post_type=item.get("post_type"),
-            create_time=dt
+            create_time=dt,
+            like_count=item.get("digg_count"),
         )
 
         # Save or update the video

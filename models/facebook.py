@@ -14,6 +14,8 @@ class FacebookPost(Base):
     content = Column(Text, nullable=True)
     post_type = Column(Text, nullable=True)
     date_posted = Column(DateTime, nullable=True, index=True)
+    like_count = Column(Integer, nullable=True)
+    comment_count = Column(Integer, nullable=True)
 
     def __repr__(self) -> str:
         return f"<FacebookPost post_id='{self.post_id}' user='{self.user_username_raw}'>"
@@ -36,5 +38,7 @@ class FacebookPost(Base):
             "user_username_raw": self.user_username_raw,
             "content": self.content,
             "post_type": self.post_type,
-            "date_posted": self.date_posted.strftime("%Y-%m-%d %H:%M:%S") if self.date_posted else None
+            "date_posted": self.date_posted.strftime("%Y-%m-%d %H:%M:%S") if self.date_posted else None,
+            "like_count": self.like_count,
+            "comment_count": self.comment_count
         }

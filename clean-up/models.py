@@ -35,6 +35,7 @@ class Post(Base):
     content_type = Column(Text, nullable=True)
     user_posted = Column(Text, nullable=True, index=True)
     coauthor_producers = Column(Text, nullable=True)
+    like_count = Column(Integer, nullable=True)
 
     def __repr__(self) -> str:
         # Updated to use actual DB column attributes
@@ -132,7 +133,8 @@ class Post(Base):
             existing.user_posted = self.user_posted
             existing.content_type = self.content_type
             existing.coauthor_producers = self.coauthor_producers
-            
+            existing.like_count = self.like_count
+
             db.commit()
             db.refresh(existing)
             return existing
@@ -160,6 +162,7 @@ class TikTokVideo(Base):
     description = Column(Text, nullable=True)
     create_time = Column(DateTime, nullable=True)
     post_type = Column(Text, nullable=True)
+    like_count = Column(Integer, nullable=True)
 
     def __repr__(self):
         return f"<TikTokVideo video_id='{self.video_id}' author='{self.author}'>"
@@ -214,6 +217,7 @@ class TikTokVideo(Base):
             existing.description = self.description
             existing.create_time = self.create_time
             existing.post_type = self.post_type
+            existing.like_count = self.like_count
             db.commit()
             db.refresh(existing)
             return existing
@@ -317,6 +321,7 @@ class FacebookPost(Base):
         content = Column(Text, nullable=True)
         post_type = Column(Text, nullable=True)
         date_posted = Column(DateTime, nullable=True, index=True)
+        like_count = Column(Integer, nullable=True)
 
         def __repr__(self) -> str:
             return f"<FacebookPost post_id='{self.post_id}' user='{self.user_username_raw}'>"
@@ -385,6 +390,7 @@ class FacebookPost(Base):
                 existing.content = self.content
                 existing.post_type = self.post_type
                 existing.date_posted = self.date_posted
+                existing.like_count = self.like_count
 
                 db.commit()
                 db.refresh(existing)

@@ -1,8 +1,6 @@
 from sqlalchemy import Column, Integer, Text, DateTime
 from db.session import Base
-
-from sqlalchemy import Column, Integer, Text, DateTime
-from db.session import Base
+from sqlalchemy.exc import IntegrityError
 
 class TikTokVideo(Base):
     __tablename__ = "tiktok_videos"  # ✅ Fixed underscores
@@ -13,16 +11,22 @@ class TikTokVideo(Base):
     description = Column(Text)
     create_time = Column(DateTime)
     post_type = Column(Text)
+    like_count = Column(Integer, nullable=True)
+    comment_count = Column(Integer, nullable=True)
 
     def __repr__(self):
         return f"<TikTokVideo video_id='{self.video_id}' author='{self.author}'>"
     
     def save(self, db):
-        """Helper method to save the video"""
-        db.add(self)
-        db.commit()
-        db.refresh(self)
-        return self
+        """Save post and silently skip duplicates"""
+        try:
+            db.add(self)
+            db.commit()
+            db.refresh(self)
+            return self
+        except IntegrityError:
+            db.rollback()
+            return None  # duplicate skipped
 
     def to_dict(self):
         return {
@@ -31,5 +35,7 @@ class TikTokVideo(Base):
             "author": self.author,
             "description": self.description,
             "post_type": self.post_type,
-            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S") if self.create_time else None
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S") if self.create_time else None,
+            "like_count": self.like_count,
+            "comment_count": self.comment_count
         }

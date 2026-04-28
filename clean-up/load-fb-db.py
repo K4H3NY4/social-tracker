@@ -23,12 +23,15 @@ try:
                 item["date_posted"].replace("Z", "+00:00")
             )
 
+        like_count = item.get("likes") or (item.get("num_likes_type") or {}).get("num")
+
         post = FacebookPost(
             post_id=item["post_id"],
             user_username_raw=item.get("profile_handle"),
             content=item.get("content"),
             post_type=item.get("post_type"),
-            date_posted=date_posted
+            date_posted=date_posted,
+            like_count=like_count,
         )
 
         # Save (upsert logic handled in model)

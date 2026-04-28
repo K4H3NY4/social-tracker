@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import Column, Integer, Text, DateTime
 from db.session import Base
 
@@ -11,16 +12,22 @@ class InstagramPost(Base):
     content_type = Column(Text)
     user_posted = Column(Text, index=True)
     coauthor_producers = Column(Text)
+    like_count = Column(Integer, nullable=True)
+    comment_count = Column(Integer, nullable=True)
 
     def __repr__(self):
         return f"<Post content_id='{self.content_id}' user='{self.user_posted}'>"
     
     def save(self, db):
-        """Helper method to save the video"""
-        db.add(self)
-        db.commit()
-        db.refresh(self)
-        return self
+        """Save post and silently skip duplicates"""
+        try:
+            db.add(self)
+            db.commit()
+            db.refresh(self)
+            return self
+        except IntegrityError:
+            db.rollback()
+            return None  # duplicate skipped
 
     def to_dict(self):
         return {
@@ -30,5 +37,7 @@ class InstagramPost(Base):
             "taken_at": self.date_posted.strftime("%Y-%m-%d %H:%M:%S") if self.date_posted else None,
             "user_posted": self.user_posted,
             "coauthor_producers": self.coauthor_producers,
-            "content_type": self.content_type
+            "content_type": self.content_type,
+            "like_count": self.like_count,
+            "comment_count": self.comment_count
         }

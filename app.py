@@ -304,7 +304,7 @@ def analyze_contract_compliance(contract: str, posts: list, username: str, date_
         """
         
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=os.environ.get("GEMINI_MODEL"),
             contents=prompt
         )
         
@@ -363,11 +363,13 @@ def check_facebook_contract_compliance(username):
         
         stmt = stmt.order_by(FacebookPost.date_posted.desc())
         posts = db.execute(stmt).scalars().all()
-        
+        total_likes = sum(p.like_count or 0 for p in posts)
+        total_comments = sum(p.comment_count or 0 for p in posts)
+
         posts_data = [post.to_dict() for post in posts]
         date_range = {'start': start_date, 'end': end_date}
         content_stats = count_facebook_content(posts_data)
-        
+
         compliance_analysis = analyze_contract_compliance(
             contract=client_record.contract,
             posts=posts_data,
@@ -376,13 +378,15 @@ def check_facebook_contract_compliance(username):
             platform='facebook',
             content_stats=content_stats
         )
-        
+
         return jsonify({
             'platform': 'facebook',
             'username': username,
             'client_name': client_record.name,
             'date_range': date_range,
             'total_posts_delivered': len(posts),
+            'total_likes': total_likes,
+            'total_comments': total_comments,
             'content_breakdown': {
                 'posts': content_stats['posts'],
                 'videos': content_stats['videos'],
@@ -447,7 +451,11 @@ def check_instagram_contract_compliance(username):
         
         # Convert to dict and mark if it's a collaboration
         posts_data = []
+        total_likes = 0
+        total_comments = 0
         for post in posts:
+            total_likes += post.like_count or 0
+            total_comments += post.comment_count or 0
             post_dict = {
                 'id': post.id,
                 'content_id': post.content_id,
@@ -456,10 +464,11 @@ def check_instagram_contract_compliance(username):
                 'content_type': post.content_type,
                 'user_posted': post.user_posted,
                 'coauthor_producers': post.coauthor_producers,
-                # Mark if this is a collaboration post
+                'like_count': post.like_count,
+                'comment_count': post.comment_count,
                 'is_collaboration': (
-                    post.user_posted != username and 
-                    post.coauthor_producers and 
+                    post.user_posted != username and
+                    post.coauthor_producers and
                     username in post.coauthor_producers
                 )
             }
@@ -489,6 +498,8 @@ def check_instagram_contract_compliance(username):
             'client_name': client_record.name,
             'date_range': date_range,
             'total_posts_delivered': len(posts),
+            'total_likes': total_likes,
+            'total_comments': total_comments,
             'content_types': {
                 'carousel': content_stats['carousel'],
                 'image': content_stats['image'],
@@ -551,11 +562,13 @@ def check_tiktok_contract_compliance(username):
         
         stmt = stmt.order_by(TikTokVideo.create_time.desc())
         videos = db.execute(stmt).scalars().all()
-        
+        total_likes = sum(v.like_count or 0 for v in videos)
+        total_comments = sum(v.comment_count or 0 for v in videos)
+
         videos_data = [video.to_dict() for video in videos]
         date_range = {'start': start_date, 'end': end_date}
         content_stats = count_tiktok_content(videos_data)
-        
+
         compliance_analysis = analyze_contract_compliance(
             contract=client_record.contract,
             posts=videos_data,
@@ -564,13 +577,15 @@ def check_tiktok_contract_compliance(username):
             platform='tiktok',
             content_stats=content_stats
         )
-        
+
         return jsonify({
             'platform': 'tiktok',
             'username': username,
             'client_name': client_record.name,
             'date_range': date_range,
             'total_videos_delivered': len(videos),
+            'total_likes': total_likes,
+            'total_comments': total_comments,
             'content_breakdown': {
                 'videos': content_stats['videos'],
                 'images': content_stats['images'],

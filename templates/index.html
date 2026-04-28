@@ -392,6 +392,53 @@
             letter-spacing: 0.3px;
         }
 
+        .likes-bar {
+            margin-top: 8px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .likes-bar-icon {
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .likes-bar-value {
+            font-size: 16px;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .likes-bar-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .comments-bar {
+            margin-top: 6px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comments-bar-icon { font-size: 14px; line-height: 1; }
+        .comments-bar-value { font-size: 16px; font-weight: 700; flex: 1; }
+        .comments-bar-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
         /* ═══════════════════════════════════════════════════════
            ANALYSIS SECTION
            ═══════════════════════════════════════════════════════ */
@@ -843,6 +890,16 @@
                         <div class="stat-box-label">Total</div>
                     </div>
                 </div>
+                <div class="likes-bar">
+                    <span class="likes-bar-icon">❤️</span>
+                    <span class="likes-bar-value" id="fb-likes">--</span>
+                    <span class="likes-bar-label">Total Likes</span>
+                </div>
+                <div class="comments-bar">
+                    <span class="comments-bar-icon">💬</span>
+                    <span class="comments-bar-value" id="fb-comments">--</span>
+                    <span class="comments-bar-label">Total Comments</span>
+                </div>
             </div>
 
             <!-- Instagram -->
@@ -879,6 +936,16 @@
                         <div class="stat-box-label">Total</div>
                     </div>
                 </div>
+                <div class="likes-bar">
+                    <span class="likes-bar-icon">❤️</span>
+                    <span class="likes-bar-value" id="ig-likes">--</span>
+                    <span class="likes-bar-label">Total Likes</span>
+                </div>
+                <div class="comments-bar">
+                    <span class="comments-bar-icon">💬</span>
+                    <span class="comments-bar-value" id="ig-comments">--</span>
+                    <span class="comments-bar-label">Total Comments</span>
+                </div>
             </div>
 
             <!-- TikTok -->
@@ -900,6 +967,16 @@
                         <div class="stat-box-value" id="tt-total">--</div>
                         <div class="stat-box-label">Total</div>
                     </div>
+                </div>
+                <div class="likes-bar">
+                    <span class="likes-bar-icon">❤️</span>
+                    <span class="likes-bar-value" id="tt-likes">--</span>
+                    <span class="likes-bar-label">Total Likes</span>
+                </div>
+                <div class="comments-bar">
+                    <span class="comments-bar-icon">💬</span>
+                    <span class="comments-bar-value" id="tt-comments">--</span>
+                    <span class="comments-bar-label">Total Comments</span>
                 </div>
             </div>
         </div>
@@ -1110,6 +1187,8 @@
                 document.getElementById('fb-posts').textContent = data.content_breakdown?.posts || 0;
                 document.getElementById('fb-videos').textContent = data.content_breakdown?.videos || 0;
                 document.getElementById('fb-total').textContent = data.total_posts_delivered || 0;
+                document.getElementById('fb-likes').textContent = (data.total_likes || 0).toLocaleString();
+                document.getElementById('fb-comments').textContent = (data.total_comments || 0).toLocaleString();
             } else if (platform === 'ig') {
                 document.getElementById('ig-carousel').textContent = data.content_types?.carousel || 0;
                 document.getElementById('ig-images').textContent = data.content_types?.image || 0;
@@ -1117,10 +1196,14 @@
                 document.getElementById('ig-collab').textContent = data.collaboration_stats?.collaborative_posts || 0;
                 document.getElementById('ig-rate').textContent = data.collaboration_stats?.collaboration_rate || '0';
                 document.getElementById('ig-total').textContent = data.total_posts_delivered || 0;
+                document.getElementById('ig-likes').textContent = (data.total_likes || 0).toLocaleString();
+                document.getElementById('ig-comments').textContent = (data.total_comments || 0).toLocaleString();
             } else if (platform === 'tt') {
                 document.getElementById('tt-videos').textContent = data.content_breakdown?.videos || 0;
                 document.getElementById('tt-images').textContent = data.content_breakdown?.images || 0;
                 document.getElementById('tt-total').textContent = data.total_videos_delivered || 0;
+                document.getElementById('tt-likes').textContent = (data.total_likes || 0).toLocaleString();
+                document.getElementById('tt-comments').textContent = (data.total_comments || 0).toLocaleString();
             }
         }
 
