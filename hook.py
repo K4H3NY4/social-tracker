@@ -142,16 +142,16 @@ def trigger_all_platforms():
         "Facebook": {
             "dataset_id": "gd_lkaxegm826bjpoo9m5",
             "data": [
-                {"url":"https://www.facebook.com/LGEastAfrica","start_date":"2026-01-01","end_date":"","num_of_posts":10},
-                {"url":"https://www.facebook.com/BascoPaintsKenya","start_date":"2026-01-01","end_date":"","num_of_posts":10},
+                {"url":"https://www.facebook.com/LGEastAfrica","start_date":"2026-01-01","end_date":"","num_of_posts":20},
+                {"url":"https://www.facebook.com/BascoPaintsKenya","start_date":"2026-01-01","end_date":"","num_of_posts":20},
             ],
             "extra_params": {}
         },
         "Instagram": {
             "dataset_id": "gd_lk5ns7kz21pck8jpis",
             "data": [
-                {"url":"https://www.instagram.com/lg_eastafrica/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":10},
-                {"url":"https://www.instagram.com/basco_paints/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":10},
+                {"url":"https://www.instagram.com/lg_eastafrica/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
+                {"url":"https://www.instagram.com/basco_paints/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
             ],
             "extra_params": {"type": "discover_new", "discover_by": "url"}
         },
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     scheduler.add_job(
         func=trigger_all_platforms, 
         trigger="interval", 
-        hours=8,
+        hours=4,
         id="social_scrape_job", 
         replace_existing=True
     )
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     # Start the scheduler
     scheduler.start()
     
-    logging.info("⏰ Scheduler started: Jobs will run every 8 hours.")
+    logging.info("⏰ Scheduler started: Jobs will run every 4 hours.")
     logging.info(f"🌐 Server starting on port 5020...")
     
     # Optional: Run once immediately on startup (remove comment to enable)
