@@ -237,6 +237,207 @@ def get_current_user():
     return jsonify({'user': g.current_user}), 200
 
 
+# ═══════════════════════════════════════════════════════════════
+# ✅ USER CRUD ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/users', methods=['GET'])
+def get_all_users():
+    """Get all users"""
+    db: Session = SessionLocal()
+
+    try:
+        users = db.execute(
+            select(User).order_by(User.created_at.desc())
+        ).scalars().all()
+
+        return jsonify({
+            'total': len(users),
+            'users': [user.to_dict() for user in users]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    """Get a single user by ID"""
+    db: Session = SessionLocal()
+
+    try:
+        user = db.execute(
+            select(User).where(User.id == user_id)
+        ).scalars().first()
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({'user': user.to_dict()}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    """
+    Create a user.
+
+    Request Body:
+    {
+        "email": "user@example.com",
+        "password": "password123",
+        "is_active": true
+    }
+    """
+    db: Session = SessionLocal()
+
+    try:
+        data = request.get_json(silent=True) or {}
+        email = normalize_email(data.get('email'))
+        password = data.get('password') or ''
+        is_active = data.get('is_active', True)
+
+        if not email or '@' not in email:
+            return jsonify({'error': 'Valid email is required'}), 400
+
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+        if not isinstance(is_active, bool):
+            return jsonify({'error': 'is_active must be true or false'}), 400
+
+        existing = db.execute(
+            select(User).where(User.email == email)
+        ).scalars().first()
+
+        if existing:
+            return jsonify({'error': 'User with this email already exists'}), 409
+
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(password),
+            is_active=is_active
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        return jsonify({
+            'message': 'User created successfully',
+            'user': user.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    """
+    Update a user. All fields are optional.
+
+    Request Body:
+    {
+        "email": "updated@example.com",
+        "password": "newpassword123",
+        "is_active": true
+    }
+    """
+    db: Session = SessionLocal()
+
+    try:
+        user = db.execute(
+            select(User).where(User.id == user_id)
+        ).scalars().first()
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        if 'email' in data:
+            email = normalize_email(data.get('email'))
+            if not email or '@' not in email:
+                return jsonify({'error': 'Valid email is required'}), 400
+
+            existing = db.execute(
+                select(User).where(User.email == email, User.id != user_id)
+            ).scalars().first()
+
+            if existing:
+                return jsonify({'error': 'Another user with this email already exists'}), 409
+
+            user.email = email
+
+        if 'password' in data:
+            password = data.get('password') or ''
+            if len(password) < 8:
+                return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+            user.password_hash = generate_password_hash(password)
+
+        if 'is_active' in data:
+            is_active = data.get('is_active')
+            if not isinstance(is_active, bool):
+                return jsonify({'error': 'is_active must be true or false'}), 400
+
+            if user_id == g.current_user.get('id') and is_active is False:
+                return jsonify({'error': 'You cannot deactivate the currently authenticated user'}), 400
+
+            user.is_active = is_active
+
+        db.commit()
+        db.refresh(user)
+
+        return jsonify({
+            'message': 'User updated successfully',
+            'user': user.to_dict()
+        }), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    """Delete a user"""
+    if user_id == g.current_user.get('id'):
+        return jsonify({'error': 'You cannot delete the currently authenticated user'}), 400
+
+    db: Session = SessionLocal()
+
+    try:
+        user = db.execute(
+            select(User).where(User.id == user_id)
+        ).scalars().first()
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        db.delete(user)
+        db.commit()
+
+        return jsonify({
+            'message': 'User deleted successfully',
+            'deleted_user_id': user_id
+        }), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
 # ═══════════════════════════════════════════════════════
 # ✅ HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════
