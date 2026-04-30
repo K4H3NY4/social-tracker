@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, g
+from flask import Flask, request, jsonify, send_from_directory, send_file, g
 from flask_cors import CORS
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import base64
 import hashlib
 import hmac
+import io
 import os
 import json
 import re
@@ -21,6 +22,14 @@ from models.instagram import InstagramPost
 from models.tiktok import TikTokVideo
 from models.client import Client
 from models.user import User
+
+from utils.client_report import (
+    get_platform_compliance_data,
+    get_platform_themes_data,
+    create_platform_charts,
+    generate_comprehensive_pdf,
+    send_client_report_email
+)
 
 # Load environment variables
 load_dotenv()
@@ -1575,6 +1584,120 @@ def search_clients():
     
     finally:
         db.close()
+
+
+
+
+
+
+# =======================================
+# Email Feature 
+# ========================================
+
+
+
+@app.route('/api/reports/client-comprehensive', methods=['GET', 'POST'])
+def generate_client_comprehensive_report():
+    """
+    Generate & send comprehensive report (Compliance + Themes) for a client
+    
+    Request Body:
+    {
+        "client_id": 1,
+        "start": "2026-03-01",
+        "end": "2026-03-31",
+        "to_email": "client@example.com",  # optional
+        "download": true                   # optional
+    }
+    """
+    def parse_bool(value, default=False):
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+        return bool(value)
+
+    db: Session = SessionLocal()
+    try:
+        data = request.args.to_dict() if request.method == 'GET' else (request.get_json(silent=True) or {})
+        client_id = data.get('client_id')
+        start_date = data.get('start')
+        end_date = data.get('end')
+        to_email = data.get('to_email')
+        send_email = bool(to_email)
+        return_pdf = parse_bool(data.get('download'), default=True)
+        
+        if not client_id:
+            return jsonify({'error': 'client_id is required'}), 400
+
+        try:
+            client_id = int(client_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'client_id must be an integer'}), 400
+            
+        client = db.execute(select(Client).where(Client.id == client_id)).scalars().first()
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+            
+        platforms = {'facebook': client.facebook, 'instagram': client.instagram, 'tiktok': client.tiktok}
+        platform_reports = {}
+        
+        for platform, username in platforms.items():
+            if not username: continue
+            
+            # 1. Compliance Data
+            compliance_data = get_platform_compliance_data(db, platform, username, start_date, end_date, client)
+            
+            # 2. Themes Data
+            themes_data = get_platform_themes_data(db, platform, username, start_date, end_date)
+            
+            # 3. Generate Charts
+            charts = create_platform_charts(compliance_data, themes_data, platform)
+            
+            platform_reports[platform] = {
+                **compliance_data,
+                **themes_data,
+                'charts': charts
+            }
+            
+        # Generate PDF
+        pdf_bytes = generate_comprehensive_pdf(client, platform_reports, start_date, end_date) if return_pdf else None
+        
+        # Send Email
+        if send_email:
+            send_client_report_email(to_email, client, platform_reports, pdf_bytes)
+            
+        # Return PDF if requested
+        if return_pdf:
+            filename = f"{client.name.replace(' ','_')}_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+            return send_file(
+                io.BytesIO(pdf_bytes),
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
+            
+        return jsonify({'message': 'Report generated successfully', 'sent_to': to_email if send_email else None}), 200
+        
+    except RuntimeError as e:
+        app.logger.error(f"Client report failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        app.logger.error(f"Client report failed: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate report'}), 500
+    finally:
+        db.close()
+
+
+
+
+
+
+
+
+
 
 # ═══════════════════════════════════════════════════════
 # ✅ HEALTH CHECK
