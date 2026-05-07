@@ -518,3 +518,5 @@ def send_client_report_email(to_email: str, client, platform_reports: dict, pdf_
         ) from exc
     except (smtplib.SMTPException, OSError) as exc:
         raise RuntimeError(f"SMTP send failed: {exc}") from exc
+
+

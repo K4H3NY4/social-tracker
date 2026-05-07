@@ -144,11 +144,14 @@ def trigger_all_platforms():
             "data": [
                 {"url":"https://www.facebook.com/LGEastAfrica","start_date":"2026-04-01","end_date":"","num_of_posts":20},
                 {"url":"https://www.facebook.com/BascoPaintsKenya","start_date":"2026-04-01","end_date":"","num_of_posts":20},
-                 {"url":"https://www.facebook.com/DPOPaybyNetwork","start_date":"2026-04-01","end_date":"","num_of_posts":100},
-                 {"url":"https://www.facebook.com/TotalEnergiesKenya","start_date":"2026-04-01","end_date":"","num_of_posts":100},
-                  {"url":"https://www.facebook.com/DoveEastAfrica","start_date":"2026-04-01","end_date":"","num_of_posts":100},
-                    {"url":"https://www.facebook.com/BrooksideDairyOfficial","start_date":"2026-04-01","end_date":"","num_of_posts":100},
-              
+                {"url":"https://www.facebook.com/DPOPaybyNetwork","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/TotalEnergiesKenya","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/DoveEastAfrica","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/BrooksideDairyOfficial","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/tuzoKE","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/DelamereKenya","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/IlaraDairyProducts","start_date":"2026-04-01","end_date":"","num_of_posts":100},
+                {"url":"https://www.facebook.com/profile.php?id=61556698456835","start_date":"2026-04-01","end_date":"","num_of_posts":100},
                
             ],
             "extra_params": {}
@@ -156,13 +159,17 @@ def trigger_all_platforms():
         "Instagram": {
             "dataset_id": "gd_lk5ns7kz21pck8jpis",
             "data": [
-                {"url":"https://www.instagram.com/lg_eastafrica/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
-                {"url":"https://www.instagram.com/basco_paints/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
-                   {"url":"https://www.instagram.com/dpo_bynetwork/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
-                     {"url":"https://www.instagram.com/visa_kenya/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
-                      {"url":"https://www.instagram.com/totalenergies_ke/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
-                       {"url":"https://www.instagram.com/dove.kenya/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/lg_eastafrica/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
+                    {"url":"https://www.instagram.com/basco_paints/","start_date":"2026-01-01","end_date":"","post_type":"","num_of_posts":20},
+                    {"url":"https://www.instagram.com/dpo_bynetwork/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/visa_kenya/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/totalenergies_ke/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/dove.kenya/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
                     {"url":"https://www.instagram.com/brooksidedairyltd/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/tuzo_ke/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/delamerekenya/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/ilaradairyproducts/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
+                    {"url":"https://www.instagram.com/brookside___plus/","start_date":"2026-04-01","end_date":"","post_type":"","num_of_posts":100},
 
                     
                 
@@ -174,9 +181,12 @@ def trigger_all_platforms():
             "data": [
                 {"url":"https://www.tiktok.com/@lg_eastafrica","num_of_posts":10},
                 {"url":"https://www.tiktok.com/@bascopaintskenya","num_of_posts":10},
-                     {"url":"https://www.tiktok.com/@dpopaybynetwork","num_of_posts":100},
-                     {"url":"https://www.tiktok.com/@totalenergieske","num_of_posts":100},
-                     {"url":"https://www.tiktok.com/@brookside.dairyltd","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@dpopaybynetwork","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@totalenergieske","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@brookside.dairyltd","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@delamerekenya","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@tuzokenya","num_of_posts":100},
+                {"url":"https://www.tiktok.com/@delamerekenya","num_of_posts":100},
                     
             ],
             "extra_params": {}

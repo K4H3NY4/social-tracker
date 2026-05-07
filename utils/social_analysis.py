@@ -350,3 +350,4 @@ def analyze_contract_compliance(
             "deliverables_missing": [],
             "recommendations": []
         }
+    
